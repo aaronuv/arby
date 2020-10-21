@@ -38,7 +38,7 @@ def malloc_more(arr, num_more):
     shape = arr.shape
     return np.vstack([arr, malloc(arr.dtype, num_more, shape[1])])
   else:
-    raise Exception, "Expected a vector or matrix."
+    raise Exception("Expected a vector or matrix.")
 
 
 def trim(arr, num):
@@ -63,7 +63,7 @@ def scale_01_to_ab(x, a, b):
   if np.allclose(float(x[0]), 0.) and np.allclose(float(x[-1]), 1.):
     return scale_ab_to_cd(np.abs(x), a, b)
   else:	
-    raise Exception, "Expected a [0,...,1] array"
+    raise Exception("Expected a [0,...,1] array")
 
 
 def get_arg(a, a0):
@@ -95,19 +95,19 @@ def plot(plot_type, ax, data, args):
   elif plot_type == 'loglog':
     ax.loglog(*data, **args)
   else:
-    print "Plot type not recognized. Choose between plot, semilogy, semilogx, or loglog."
+    print("Plot type not recognized. Choose between plot, semilogy, semilogx, or loglog.")
   
   return ax
 
 
 def tuple_to_vstack(arr):
-  return np.vstack(map(np.ravel, tuple(arr)))
+  return np.vstack(list(map(np.ravel, tuple(arr))))
 
 
 def meshgrid(*arrs):
   """Multi-dimensional version of numpy's meshgrid"""
   arrs = tuple(reversed(arrs))  
-  lens = map(len, arrs)
+  lens = list(map(len, arrs))
   dim = len(arrs)
   sz = 1
   for s in lens:
@@ -178,7 +178,7 @@ def h5open(file, mode):
       fp = h5py.File(file, mode)
       isopen = True
     except IOError:
-      print "Could not open file {} in {} mode.".format(file, mode)
+      print("Could not open file {} in {} mode.".format(file, mode))
   
   # If file is a HDF5 File or Group descriptor then assign file to fp
   elif hasattr(file, '__class__'):
@@ -188,7 +188,7 @@ def h5open(file, mode):
   
   # Complain that file type is not recognized
   else:
-    raise Exception, "{} not recognized.".format(file)
+    raise Exception("{} not recognized.".format(file))
   
   return fp, isopen
 
