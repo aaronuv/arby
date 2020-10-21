@@ -27,42 +27,30 @@ class _IteratedModifiedGramSchmidt(object):
     """Given a function, h, find the corresponding basis function orthonormal to all previous ones"""
     norm = self.inner.norm(h)
     e = h/norm
-    #r = np.zeros(len(basis))
+
     flag, ctr = 0, 1
     while flag == 0:
-      #s = np.zeros(len(basis))
       for b in basis:
-      #for ii, bb in enumerate(basis):
-        # s[ii] = self.inner.dot(bb, e, self.inner_type)
-        # e -= bb*s[ii]
         e -= b*self.inner.dot(b, e)
-      #r += s
       new_norm = self.inner.norm(e)
-      #r[0] = new_norm
-      # Iterate, if necessary
       if new_norm/norm <= a:
         norm = new_norm
         ctr += 1
         if ctr > max_iter:
-          print(">>> Warning(Max number of iterations reached) Basis may not be orthonormal.")
+          print(">>> Warning(Max number of iterations reached).")
           flag = 1
       else:
         flag = 1
     
-    #print r
     
     return [e/new_norm, new_norm]
-    #return [e/new_norm, new_norm, r]
     
   def make_basis(self, hs, norms=False, a=0.5, max_iter=3):
     """Given a set of functions, hs, find the corresponding orthonormal set of basis functions."""
     
     dim = np.shape(hs)
-    #basis = np.zeros(dim, dtype=hs.dtype)
     basis = np.zeros_like(hs)
     basis[0] = self.inner.normalize(hs[0])
-    # R = np.zeros((dim[0],dim[0]), dtype=hs.dtype)
-    # R[0][0] = self.inner.norm(hs[0], self.inner_type)
     if norms:
       norm = np.zeros(dim[0], dtype='double')
       norm[0] = self.inner.norm(hs[0])
@@ -70,17 +58,13 @@ class _IteratedModifiedGramSchmidt(object):
     for ii in range(1, dim[0]):
       if norms:
         basis[ii], norm[ii] = self.add_basis(hs[ii], basis[:ii], a=a, max_iter=max_iter)
-        #basis[ii], norm[ii], R[ii-1][:ii] = self.add_basis(hs[ii], basis[:ii], a=a, max_iter=max_iter)
       else:
         basis[ii], _ = self.add_basis(hs[ii], basis[:ii], a=a, max_iter=max_iter)
-        #basis[ii], _, R[ii-1][:ii] = self.add_basis(hs[ii], basis[:ii], a=a, max_iter=max_iter)
             
     if norms:
       return [np.array(basis), norm]
-      #return [np.array(basis), norm, R]
     else:
       return np.array(basis)
-      #return [np.array(basis), R]
 
 
 class GramSchmidt(_IteratedModifiedGramSchmidt):
@@ -130,10 +114,8 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
     ans = self.add_basis(h, self.basis[:step], a=a, max_iter=max_iter)
     
     if self.normsQ:
-      #self.basis[step+1], self.norms[step+1] = ans
       self.basis[step], self.norms[step+1] = ans
     else:
-      #self.basis[step+1], _ = ans
       self.basis[step], _ = ans
   
   def make(self, a=0.5, max_iter=3, timerQ=False):
@@ -200,13 +182,9 @@ class _ReducedBasis(object):
     for ii in range(dim):
       ans += np.abs(self._alpha(basis[ii], h))**2
     return norm**2-ans
-    #return norm**2-np.sum(np.abs(self._alpha(basis[ii], h))**2 for ii in range(dim))
     
   def proj_errors_from_basis(self, basis, hs):
     """Square of the projection error of functions hs on basis"""
-    #norms = np.real([self.inner.norm(hh, self.inner_type) for hh in hs])
-    #dim = len(basis[:,0])
-    #return [norms**2-np.sum(np.abs(self._alpha(basis[ii], hh))**2 for ii in range(dim)) for hh in hs]
     return [self.proj_error_from_basis(basis, hh) for hh in hs]
     
   def proj_mismatch_from_basis(self, basis, h):
@@ -219,17 +197,13 @@ class _ReducedBasis(object):
     """Square of the projection error of a function h on basis in terms of pre-computed alpha matrix"""
     if norms is None:
       norms = np.ones(len(alpha[0]), dtype='double')
-    #dim = len(alpha[:,0])
     ans = 0.
     for aa in alpha:
       ans += np.abs(aa)**2
     return norms**2 - ans
-    #return np.sqrt(np.abs(norms**2 - ans))
-    #return norms**2-np.sum(abs(alpha[ii])**2 for ii in range(dim))
   
   def projection_from_basis(self, h, basis):
     """Project a function h onto the basis functions"""
-    #return np.array([ee*self._alpha(ee, h) for ee in basis])
     ans = 0.
     for ee in basis:
       ans += ee*self._alpha(ee, h)
@@ -317,8 +291,6 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
       _ReducedBasis.__init__(self, inner)
       _IteratedModifiedGramSchmidt.__init__(self, inner)
       
-      # Set the loss function that measures the discrepancy between
-      # the training space data and its projection onto the reduced basis
       assert type(loss) is str, "Expecting string for variable `loss`."
       self._loss = loss
       if loss == 'L2':
@@ -390,7 +362,6 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
       self.basis[0] = training_space[seed]/self._norms[seed]
       self.basisnorms[0] = self._norms[seed]
       self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
-      #training_space[self.indices[0]] = np.ma.masked
   
   def iter(self, step, errs, training_space):
     """One iteration of standard reduced basis greedy algorithm.
@@ -425,13 +396,6 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
       self.errors[step+1] = np.max(errs)
       self.basis[step+1], self.basisnorms[step+1] = self.add_basis(training_space[self.indices[step+1]], self.basis[:step+1])
       self.alpha[step+1] = self.alpha_arr(self.basis[step+1], training_space)
-    #   #training_space[self.indices[step+1]] = np.ma.masked
-    
-    # self.indices[step+1] = np.argmax(errs)
-    # self.errors[step+1] = np.max(errs)
-    # self.basis[step+1], self.basisnorms[step+1] = self.add_basis(training_space[self.indices[step+1]], self.basis[:step+1])
-    # self.alpha[step+1] = self.alpha_arr(self.basis[step+1], training_space)
-    # training_space[self.indices[step+1]] = np.ma.masked
   
   def make(self, training_space, index_seed, tol, num=None, rel=False, verbose=False, timer=False):
     """Make a reduced basis using the standard greedy algorithm.
@@ -502,7 +466,6 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
       # otherwise, add another point and basis vector
       else:
         # Single iteration and update errors, indices, basis, alpha arrays
-        #errs = self.proj_errors_from_alpha(self.alpha[:nn+1], norms=self._norms)
         if self._loss == 'L2':
           errs = self.loss(self.alpha[:nn+1], norms=self._norms)
         elif self._loss == 'Linfty':
