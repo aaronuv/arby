@@ -47,14 +47,14 @@ def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
   
   # Validate inputs
   input_dict = {'num':num, 'rate':rate, 'incr':incr}
-  if input_dict.values().count(None) != len(input_dict.keys())-1:
-    raise Exception, "Must give input for only one of num, rate, or incr."
+  if list(input_dict.values()).count(None) != len(list(input_dict.keys()))-1:
+    raise Exception("Must give input for only one of num, rate, or incr.")
   
   assert type(interval) in [list, np.ndarray], "List or array input required."
   len_interval = len(interval)
   
   # Extract and validate the sampling method requested
-  for kk, vv in input_dict.iteritems():
+  for kk, vv in input_dict.items():
     if vv is not None:
       key = kk
       value = input_dict[kk]
@@ -82,9 +82,9 @@ def _nodes_weights(interval=None, num=None, rate=None, incr=None, rule=None):
   assert interval, "Input to `interval` must not be None."
   values = [num, rate, incr]
   if values.count(None) != 2:
-    raise Exception, "Must give input for only one of num, rate, or incr."
+    raise Exception("Must give input for only one of num, rate, or incr.")
   if type(rule) is not str:
-    raise Exception, "Input to `rule` must be a string."
+    raise Exception("Input to `rule` must be a string.")
   
   # Generate requested quadrature rule
   if rule in ['riemann', 'trapezoidal']:
@@ -92,7 +92,7 @@ def _nodes_weights(interval=None, num=None, rate=None, incr=None, rule=None):
   elif rule in ['chebyshev', 'chebyshev-lobatto', 'legendre', 'legendre-lobatto']:
     all_nodes, all_weights = QuadratureRules()[rule](interval, num=num)
   else:
-    raise Exception, "Requested quadrature rule (`%s`) not available." % rule
+    raise Exception("Requested quadrature rule (`%s`) not available." % rule)
 
   return all_nodes, all_weights, rule
 
@@ -113,7 +113,7 @@ class QuadratureRules(object):
       'legendre': self.legendre,
       'legendre-lobatto': self.legendre_lobatto,
       }
-    self.rules = self._dict.keys()
+    self.rules = list(self._dict.keys())
   
   def __getitem__(self, rule):
     return self._dict[rule]
@@ -344,13 +344,13 @@ class QuadratureRules(object):
     return [nodes*(b-a)/2.+(b+a)/2., weights*(b-a)/2.]
     
   def legendre(self, interval, num):
-    raise Exception, "Legendre-Gauss quadrature rule is not yet implemented."
+    raise Exception("Legendre-Gauss quadrature rule is not yet implemented.")
   
   def _legendre(self, a, b, n):
     pass
   
   def legendre_lobatto(self, interval, num):
-    raise Exception, "Legendre-Gauss-Lobatto quadrature rule is not yet implemented."
+    raise Exception("Legendre-Gauss-Lobatto quadrature rule is not yet implemented.")
     
   def _legendre_lobatto(self, a, b, n):
     pass
@@ -369,7 +369,7 @@ class Integration(object):
       #self._interval = interval
     else:
       if num is not None or rate is not None or incr is not None:
-        print "\n>>>Warning: Using given nodes and weights to build quadrature rule."
+        print("\n>>>Warning: Using given nodes and weights to build quadrature rule.")
       self.nodes, self.weights = nodes, weights
     
     self.integrals = [
@@ -430,8 +430,8 @@ class Integration(object):
     a, b = self.nodes[0], self.nodes[-1]
     expd = (b**(n+1.)-a**(n+1.))/(n+1.)
     
-    print "\nExpected value for integral =", expd
-    print "Computed value for integral =", ans
-    print "\nAbsolute difference =", expd-ans
-    print "Relative difference =", 1.-ans/expd
+    print("\nExpected value for integral =", expd)
+    print("Computed value for integral =", ans)
+    print("\nAbsolute difference =", expd-ans)
+    print("Relative difference =", 1.-ans/expd)
 
