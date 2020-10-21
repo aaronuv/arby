@@ -126,9 +126,6 @@ def meshgrid(*arrs):
   return ans[::-1]
 
 
-# def meshgrid_stack(a1, a2):
-#   A1, A2 = meshgrid(a1, a2)
-#   return tuple_to_vstack([A2, A1]).T
 def meshgrid_stack(*arrs):
   Arrs = meshgrid(*arrs)
   return tuple_to_vstack(Arrs).T
