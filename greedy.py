@@ -44,7 +44,7 @@ class _IteratedModifiedGramSchmidt(object):
         norm = new_norm
         ctr += 1
         if ctr > max_iter:
-          print ">>> Warning(Max number of iterations reached) Basis may not be orthonormal."
+          print(">>> Warning(Max number of iterations reached) Basis may not be orthonormal.")
           flag = 1
       else:
         flag = 1
@@ -150,7 +150,7 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
       self.iter(ii, self.functions[ii], a=a, max_iter=max_iter)
     
     if timerQ:
-      print "\nElapsed time =", time.time()-t0
+      print("\nElapsed time =", time.time()-t0)
     
     if self.normsQ:
       return [np.array(self.basis), self.norms]
@@ -274,7 +274,7 @@ class CrossValidation(object):
     ens_arg_errors, ens_errors = [], []
     for nn in range(n):
       if verbose and not (nn+1)%10:
-        print "Trial number", nn+1
+        print("Trial number", nn+1)
       self.Kfold(x, y, K=K, parallel=parallel, random=random)
       ens_errors.append( self.errors[K] )
       ens_arg_errors.append( self.arg_errors[K] )
@@ -301,7 +301,7 @@ class _ReducedBasis(object):
     elif Nmodes > 1:
       self.basis = lib.malloc(dtype, Nbasis, Nmodes, Nquads)
     else:
-      raise Exception, "Expected positive number of modes."
+      raise Exception("Expected positive number of modes.")
     self.basisnorms = lib.malloc('double', Nbasis)
     self.alpha = lib.malloc(dtype, Nbasis, Npoints)	
     
@@ -455,7 +455,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
           return np.array([self.inner.Linfty(training[ii]-projs[ii]) for ii in range(num)])
         self.loss = Linfty
     else:
-      print "No integration rule given."
+      print("No integration rule given.")
   
   
   def seed(self, Nbasis, training_space, seed):
@@ -489,7 +489,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
     elif len(dim) == 3:
       Npoints, Nmodes, Nsamples = dim
     else:
-      raise Exception, "Unexpected dimensions for training space."
+      raise Exception("Unexpected dimensions for training space.")
     
     # Compute norms of training space data
     self._norms = np.array([self.inner.norm(tt) for tt in training_space])
@@ -541,7 +541,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
     
     next_index = np.argmax(errs)
     if next_index in self.indices:
-      print ">>> Warning(Index already selected): Exiting greedy algorithm."
+      print(">>> Warning(Index already selected): Exiting greedy algorithm.")
       return 1
     else:
       self.indices[step+1] = np.argmax(errs)
@@ -597,7 +597,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
     
     # The standard greedy algorithm with fixed training set
     if verbose and self._Nbasis > 0:
-      print "\nStep", "\t", "Error"
+      print("\nStep", "\t", "Error")
     if timer:
       t0 = time.time()
     
@@ -609,9 +609,9 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
     while nn < self._Nbasis:
       if verbose:
         if rel:
-          print nn+1, "\t", self.errors[nn]/self.errors[0]
+          print(nn+1, "\t", self.errors[nn]/self.errors[0])
         else:
-          print nn+1, "\t", self.errors[nn]
+          print(nn+1, "\t", self.errors[nn])
         
       # Check if tolerance is met
       if self.errors[nn] <= tol:
@@ -640,7 +640,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
       nn += 1
       
     if timer:
-      print "\nElapsed time =", time.time()-t0
+      print("\nElapsed time =", time.time()-t0)
       
     # Trim excess allocated entries
     self.size = nn
@@ -671,7 +671,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
     try:
       import matplotlib.pyplot as plt
     except ImportError:
-      print "Cannot load matplotlib.pyplot module for plotting."
+      print("Cannot load matplotlib.pyplot module for plotting.")
     
     if hasattr(self, 'errors'):
       if axis is None:
@@ -679,9 +679,9 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
       else:
         ax = axis
       if rel:
-        data = [range(1, self.size+1), self.errors/self.errors[0]]
+        data = [list(range(1, self.size+1)), self.errors/self.errors[0]]
       else:
-        data = [range(1, self.size+1), self.errors]
+        data = [list(range(1, self.size+1)), self.errors]
       args = {'color': color, 
               'marker': marker,
               'linestyle': linestyle,
@@ -697,7 +697,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         plt.show()
     
     else:
-      print "Object `errors` not found."
+      print("Object `errors` not found.")
     
     if ax is None:
       return fig, ax
