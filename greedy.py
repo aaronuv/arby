@@ -1,5 +1,8 @@
 # --- greedy.py ---
 
+# Copyright (c) 2020, Aaróón Villanueva
+# License: MIT
+#   Full Text: https://gitlab.com/aaronuv/rbpy/-/edit/master/LICENSE
 """
 	Classes for building reduced basis greedy algorithms
 """
