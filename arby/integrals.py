@@ -161,6 +161,7 @@ class QuadratureRules(object):
     """
     nodes = np.linspace( a, b, num=n )
     weights = np.ones(n, dtype='double')
+    weights[-1] = 0.
     return [nodes, (b-a)/(n-1.)*weights]
 
   def _riemann_rate(self, a, b, rate):
