@@ -24,6 +24,6 @@ setup(
     # author_email="your email",
     # url="https://gitlab.com/aaronuv/rbpy",
     packages=["arby",],
-    install_requires=["numpy>=1.6", "scipy>=0.16"],
+    install_requires=["numpy>=1.6", "scipy>=0.16", "h5py>=2.10.0"],
     test_suite="tests",
 )
