@@ -3,7 +3,7 @@ Helper functions used by several modules.
 """
 
 import numpy as np, h5py
-from scipy.misc import factorial
+#from scipy.misc import factorial
 
 
 def partitions(n, K):
@@ -78,9 +78,9 @@ def map_intervals(x, a, b):
   return M*x+B
 
 
-def choose(top, bottom):
-  """Combinatorial choose function"""
-  return factorial(top)/factorial(bottom)/factorial(top-bottom)
+#def choose(top, bottom):
+#  """Combinatorial choose function"""
+#  return factorial(top)/factorial(bottom)/factorial(top-bottom)
 
 
 def plot(plot_type, ax, data, args):
