@@ -5,7 +5,7 @@
 """
 
 import numpy as np
-from lib import tuple_to_vstack, meshgrid
+from .lib import tuple_to_vstack, meshgrid
 
 
 #########################

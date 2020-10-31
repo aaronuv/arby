@@ -10,7 +10,7 @@
 __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 
 import numpy as np
-import lib
+from .lib import *
 
 
 #############################################
