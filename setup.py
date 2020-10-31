@@ -23,7 +23,7 @@ setup(
     author="Aaron Villanueva",
     # author_email="your email",
     # url="https://gitlab.com/aaronuv/rbpy",
-    py_modules=["arby",],
+    packages=["arby",],
     install_requires=["numpy>=1.6", "scipy>=0.16"],
     test_suite="tests",
 )
