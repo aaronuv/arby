@@ -1,6 +1,6 @@
 # --- greedy.py ---
 
-# Copyright (c) 2020, Aaróón Villanueva
+# Copyright (c) 2020, Aarón Villanueva
 # License: MIT
 #   Full Text: https://gitlab.com/aaronuv/rbpy/-/edit/master/LICENSE
 """
@@ -12,6 +12,7 @@ __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 import numpy as np
 from .lib import *
 
+#malloc are from lib
 
 #############################################
 # Class for iterated, modified Gram-Schmidt #
@@ -108,9 +109,9 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
     
     self.normsQ = normsQ
     if self.normsQ:
-      self.norms = lib.malloc(self.functions.dtype, self.Nbasis)
+      self.norms = malloc(self.functions.dtype, self.Nbasis)
     
-    self.basis = lib.malloc(self.functions.dtype, self.Nbasis, self.Nnodes)
+    self.basis = malloc(self.functions.dtype, self.Nbasis, self.Nnodes)
   
   def iter(self, step, h, a=0.5, max_iter=3):
     """One iteration of the iterated, modified Gram-Schmidt algorithm"""
@@ -156,16 +157,16 @@ class _ReducedBasis(object):
   
   def malloc(self, Nbasis, Npoints, Nquads, Nmodes=1, dtype='complex'):
     """Allocate memory for numpy arrays used for making reduced basis"""
-    self.errors = lib.malloc('double', Nbasis)
-    self.indices = lib.malloc('int', Nbasis)
+    self.errors = malloc('double', Nbasis)
+    self.indices = malloc('int', Nbasis)
     if Nmodes == 1:
-      self.basis = lib.malloc(dtype, Nbasis, Nquads)
+      self.basis = malloc(dtype, Nbasis, Nquads)
     elif Nmodes > 1:
-      self.basis = lib.malloc(dtype, Nbasis, Nmodes, Nquads)
+      self.basis = malloc(dtype, Nbasis, Nmodes, Nquads)
     else:
       raise Exception("Expected positive number of modes.")
-    self.basisnorms = lib.malloc('double', Nbasis)
-    self.alpha = lib.malloc(dtype, Nbasis, Npoints)	
+    self.basisnorms = malloc('double', Nbasis)
+    self.alpha = malloc(dtype, Nbasis, Npoints)	
     
   def _alpha(self, e, h):
     """Inner product of a basis function e with a function h:
