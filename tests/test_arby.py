@@ -12,9 +12,8 @@ class TestArby(unittest.TestCase):
         # Sample parameter nu between 0 and 10
         nu = np.linspace(0, 10, num=npoints)
         # set integration rule
-        integration = arby.integrals.Integration(
-            [0, 1], num=npoints, rule="riemann"
-        )
+        integration = arby.integrals.Integration([0, 1], num=npoints,
+                                                 rule="riemann")
         # build traning space
         training = np.array([BesselJ(nn, integration.nodes) for nn in nu])
         # build reduced basis

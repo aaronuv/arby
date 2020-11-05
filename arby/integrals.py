@@ -10,12 +10,30 @@ Classes and functions for computing inner products of functions
 """
 
 import numpy as np
-from .lib import tuple_to_vstack, meshgrid
 
 
 #########################
 # Some helper functions #
 #########################
+
+def _rate_to_num(a, b, rate):
+    """Convert sample rate to sample numbers in [a,b]"""
+    return np.floor(np.float(b - a) * rate) + 1
+
+
+def _num_to_rate(a, b, num):
+    """Convert sample numbers in [a,b] to sample rate"""
+    return (num - 1.0) / np.float(b - a)
+
+
+def _incr_to_num(a, b, incr):
+    """Convert increment to sample numbers in [a,b]"""
+    return _rate_to_num(a, b, 1.0 / incr)
+
+
+def _num_to_incr(a, b, num):
+    """Convert sample numbers in [a,b] to increment"""
+    return 1.0 / _num_to_rate(a, b, num)
 
 
 def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):

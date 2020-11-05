@@ -10,7 +10,6 @@ Helper functions used by several modules.
 """
 
 import numpy as np
-import h5py
 
 
 def malloc(dtype, *nums):
@@ -33,8 +32,6 @@ def malloc_more(arr, num_more):
 
 def trim(arr, num):
     return arr[:num]
-
-
 
 
 def tuple_to_vstack(arr):
