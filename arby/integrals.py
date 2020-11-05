@@ -53,10 +53,7 @@ def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
 
     # Validate inputs
     input_dict = {"num": num, "rate": rate, "incr": incr}
-    if (
-        list(input_dict.values()).count(None)
-        != len(list(input_dict.keys())) - 1
-    ):
+    if list(input_dict.values()).count(None) != len(list(input_dict.keys())) - 1:
         raise Exception("Must give input for only one of num, rate, or incr.")
 
     assert type(interval) in [
@@ -114,9 +111,7 @@ def _nodes_weights(interval=None, num=None, rate=None, incr=None, rule=None):
     ]:
         all_nodes, all_weights = QuadratureRules()[rule](interval, num=num)
     else:
-        raise Exception(
-            "Requested quadrature rule (`%s`) not available." % rule
-        )
+        raise Exception("Requested quadrature rule (`%s`) not available." % rule)
 
     return all_nodes, all_weights, rule
 
@@ -391,9 +386,7 @@ class QuadratureRules(object):
         return [nodes * (b - a) / 2.0 + (b + a) / 2.0, weights * (b - a) / 2.0]
 
     def legendre(self, interval, num):
-        raise Exception(
-            "Legendre-Gauss quadrature rule is not yet implemented."
-        )
+        raise Exception("Legendre-Gauss quadrature rule is not yet implemented.")
 
     def _legendre(self, a, b, n):
         pass

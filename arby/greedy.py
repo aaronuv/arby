@@ -4,15 +4,14 @@
 # License: MIT
 #   Full Text: https://gitlab.com/aaronuv/rbpy/-/edit/master/LICENSE
 """
-	Classes for building reduced basis greedy algorithms
+Classes for building reduced basis greedy algorithms
 """
 
 __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 
 import numpy as np
-from .lib import *
-
-# malloc are from lib
+from .lib import malloc
+import time
 
 #############################################
 # Class for iterated, modified Gram-Schmidt #
@@ -21,15 +20,17 @@ from .lib import *
 
 
 class _IteratedModifiedGramSchmidt(object):
-    """Iterated modified Gram-Schmidt algorithm for building an orthonormal basis.
-    Algorithm from Hoffman, `Iterative Algorithms for Gram-Schmidt Orthogonalization`.
+    """Iterated modified Gram-Schmidt algorithm for building an orthonormal
+    basis. Algorithm from Hoffman, `Iterative Algorithms for Gram-Schmidt
+    Orthogonalization`.
     """
 
     def __init__(self, inner):
         self.inner = inner
 
     def add_basis(self, h, basis, a=0.5, max_iter=3):
-        """Given a function, h, find the corresponding basis function orthonormal to all previous ones"""
+        """Given a function, h, find the corresponding basis function
+        orthonormal to all previous ones"""
         norm = self.inner.norm(h)
         e = h / norm
 
@@ -50,7 +51,8 @@ class _IteratedModifiedGramSchmidt(object):
         return [e / new_norm, new_norm]
 
     def make_basis(self, hs, norms=False, a=0.5, max_iter=3):
-        """Given a set of functions, hs, find the corresponding orthonormal set of basis functions."""
+        """Given a set of functions, hs, find the corresponding orthonormal
+        set of basis functions."""
 
         dim = np.shape(hs)
         basis = np.zeros_like(hs)
@@ -177,7 +179,8 @@ class _ReducedBasis(object):
         return self.inner.dot(e, h)
 
     def alpha_arr(self, e, hs):
-        """Inner products of a basis function e with an array of functions hs"""
+        """Inner products of a basis function e with an array of functions
+        hs"""
         return np.array([self._alpha(e, hh) for hh in hs])
 
     def proj_error_from_basis(self, basis, h):
@@ -199,16 +202,14 @@ class _ReducedBasis(object):
         dim = len(basis[:, 0])
         return (
             1.0
-            - (
-                np.sum(
-                    abs(self._alpha(basis[ii], h)) ** 2 for ii in range(dim)
-                ).real
-            )
+            - (np.sum(abs(self._alpha(basis[ii], h)) ** 2 for ii in
+               range(dim)).real)
             / norms
         )
 
     def proj_errors_from_alpha(self, alpha, norms=None):
-        """Square of the projection error of a function h on basis in terms of pre-computed alpha matrix"""
+        """Square of the projection error of a function h on basis in terms
+        of pre-computed alpha matrix"""
         if norms is None:
             norms = np.ones(len(alpha[0]), dtype="double")
         ans = 0.0
@@ -224,8 +225,8 @@ class _ReducedBasis(object):
         return ans
 
     def projection_from_alpha(self, alpha, basis):
-        """Project a function h onto the basis functions using the precomputed
-        quantity alpha = <basis, h>"""
+        """Project a function h onto the basis functions using the
+        precomputed quantity alpha = <basis, h>"""
         ans = 0.0
         for ii, ee in basis:
             ans += ee * alpha[ii]
@@ -305,7 +306,8 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
             _ReducedBasis.__init__(self, inner)
             _IteratedModifiedGramSchmidt.__init__(self, inner)
 
-            assert type(loss) is str, "Expecting string for variable `loss`."
+            assert type(loss) is str, "Expecting string for "
+            "variable`loss`."
             self._loss = loss
             if loss == "L2":
                 self.loss = self.proj_errors_from_alpha
@@ -313,11 +315,8 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
                 def Linfty(alpha, basis, training):
                     num = len(training)
-                    projs = np.dot(
-                        alpha.T, basis
-                    )  # TODO: Don't use .T if possible
-                    # return np.array([self.inner.Linfty(training[nn]-projs[nn]) for nn in range(num)])
-                    # return self.inner.Linfty(training-projs)
+                    projs = np.dot(alpha.T, basis)
+
                     return np.array(
                         [
                             self.inner.Linfty(training[ii] - projs[ii])
@@ -332,9 +331,9 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
     def seed(self, Nbasis, training_space, seed):
         """Seed the greedy algorithm.
 
-        Seeds the first entries in the errors, indices, basis, and alpha arrays
-        for use with the standard greedy algorithm for producing a reduced basis
-        representation.
+        Seeds the first entries in the errors, indices, basis, and alpha
+        arrays for use with the standard greedy algorithm for producing a
+        reduced basis representation.
 
         Input
         -----
@@ -364,7 +363,6 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
         # Compute norms of training space data
         self._norms = np.array([self.inner.norm(tt) for tt in training_space])
-
         # Validate inputs
         assert Nsamples == np.size(
             self.inner.weights
@@ -372,13 +370,13 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         self._Nbasis = Nbasis
         assert (
             self._Nbasis <= Npoints
-        ), "Number of requested basis elements is larger than size of training set."
+        ), "Number of requested basis elements is larger than size of "
+        "training set."
 
         # Allocate memory for greedy algorithm arrays
         dtype = type(np.asarray(training_space).flatten()[0])
-        self.malloc(
-            self._Nbasis, Npoints, Nsamples, Nmodes=Nmodes, dtype=dtype
-        )
+        self.malloc(self._Nbasis, Npoints, Nsamples, Nmodes=Nmodes,
+                    dtype=dtype)
 
         # Seed
         if Nbasis > 0:
@@ -417,9 +415,8 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
         next_index = np.argmax(errs)
         if next_index in self.indices:
-            print(
-                ">>> Warning(Index already selected): Exiting greedy algorithm."
-            )
+            print(">>> Warning(Index already selected): Exiting greedy "
+                  "algorithm.")
             return 1
         else:
             self.indices[step + 1] = np.argmax(errs)
@@ -427,9 +424,8 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
             self.basis[step + 1], self.basisnorms[step + 1] = self.add_basis(
                 training_space[self.indices[step + 1]], self.basis[: step + 1]
             )
-            self.alpha[step + 1] = self.alpha_arr(
-                self.basis[step + 1], training_space
-            )
+            self.alpha[step + 1] = self.alpha_arr(self.basis[step + 1],
+                                                  training_space)
 
     def make(
         self,
@@ -473,9 +469,8 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
             self._Nbasis = len(training_space)
         else:
             assert type(num) is int, "Expecting integer."
-            assert (
-                num >= 0
-            ), "Requested number of basis vectors must be non-negative."
+            assert num >= 0, "Requested number of basis vectors must be "
+            "non negative."
             self._Nbasis = num
 
         # Seed the greedy algorithm
@@ -510,9 +505,11 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
                 break
             # otherwise, add another point and basis vector
             else:
-                # Single iteration and update errors, indices, basis, alpha arrays
+                # Single iteration and update errors, indices, basis, alpha
+                # arrays
                 if self._loss == "L2":
-                    errs = self.loss(self.alpha[: nn + 1], norms=self._norms)
+                    errs = self.loss(self.alpha[: nn + 1],
+                                     norms=self._norms)
                 elif self._loss == "Linfty":
                     errs = self.loss(
                         self.alpha[: nn + 1],
