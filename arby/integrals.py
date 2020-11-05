@@ -13,41 +13,6 @@ from .lib import tuple_to_vstack, meshgrid
 #########################
 
 
-def _rate_to_num(a, b, rate):
-    """Convert sample rate to sample numbers in [a,b]"""
-    return np.floor(np.float(b - a) * rate) + 1
-
-
-def _num_to_rate(a, b, num):
-    """Convert sample numbers in [a,b] to sample rate"""
-    return (num - 1.0) / np.float(b - a)
-
-
-def _incr_to_num(a, b, incr):
-    """Convert increment to sample numbers in [a,b]"""
-    return _rate_to_num(a, b, 1.0 / incr)
-
-
-def _num_to_incr(a, b, num):
-    """Convert sample numbers in [a,b] to increment"""
-    return 1.0 / _num_to_rate(a, b, num)
-
-
-def grid(*a):
-    """
-    Make a meshgrid given a list of arrays.
-
-    Input
-    -----
-    a -- list of arrays that will be formed in a grid
-
-    Output
-    ------
-    Arrays of the meshgrid
-    """
-    return tuple_to_vstack(meshgrid(*a))
-
-
 def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
     """The workhorse for making quadrature rules"""
 
@@ -130,11 +95,7 @@ class QuadratureRules(object):
     def __init__(self):
         self._dict = {
             "riemann": self.riemann,
-            "trapezoidal": self.trapezoidal,
-            "chebyshev": self.chebyshev,
-            "chebyshev-lobatto": self.chebyshev_lobatto,
-            "legendre": self.legendre,
-            "legendre-lobatto": self.legendre_lobatto,
+            "trapezoidal": self.trapezoidal
         }
         self.rules = list(self._dict.keys())
 
@@ -330,78 +291,6 @@ class QuadratureRules(object):
         ), "Sample spacing is larger than interval. Decrease increment."
         n = _incr_to_num(a, b, incr)
         return self._trapezoidal_num(a, b, n)
-
-    def chebyshev(self, interval, num):
-        """
-        Uniformly sampled array using Chebyshev-Gauss quadrature rule
-        over given interval with given number of samples
-
-        Input
-        -----
-        interval -- list indicating interval(s) for quadrature
-        num  -- number of quadrature points
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        rule_dict = {"num": self._chebyshev}
-        return _make_rules(interval, rule_dict, num=num)
-
-    def _chebyshev(self, a, b, n):
-        # Compute nodes and weights
-        num = int(n) - 1.0
-        nodes = np.array(
-            [
-                -np.cos(np.pi * (2.0 * ii + 1.0) / (2.0 * num + 2.0))
-                for ii in range(int(n))
-            ]
-        )
-        weights = np.pi / (num + 1.0) * np.sqrt(1.0 - nodes ** 2)
-        return [nodes * (b - a) / 2.0 + (b + a) / 2.0, weights * (b - a) / 2.0]
-
-    def chebyshev_lobatto(self, interval, num):
-        """
-        Uniformly sampled array using Chebyshev-Gauss-Lobatto quadrature rule
-        over given interval with given number of samples
-
-        Input
-        -----
-        interval -- list indicating interval(s) for quadrature
-        num  -- number of quadrature points
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        rule_dict = {"num": self._chebyshev_lobatto}
-        return _make_rules(interval, rule_dict, num=num)
-
-    def _chebyshev_lobatto(self, a, b, n):
-        # Compute nodes and weights
-        num = int(n) - 1.0
-        nodes = np.array([-np.cos(np.pi * ii / num) for ii in range(int(n))])
-        weights = np.pi / num * np.sqrt(1.0 - nodes ** 2.0)
-        weights[0] /= 2.0
-        weights[-1] /= 2.0
-        return [nodes * (b - a) / 2.0 + (b + a) / 2.0, weights * (b - a) / 2.0]
-
-    def legendre(self, interval, num):
-        raise Exception("Legendre-Gauss quadrature rule is not "
-                        "yet implemented.")
-
-    def _legendre(self, a, b, n):
-        pass
-
-    def legendre_lobatto(self, interval, num):
-        raise Exception(
-            "Legendre-Gauss-Lobatto quadrature rule is not yet implemented."
-        )
-
-    def _legendre_lobatto(self, a, b, n):
-        pass
 
 
 ###################################################
