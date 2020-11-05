@@ -1,5 +1,10 @@
 # --- integrals.py ---
 
+# Copyright (c) 2020, Aarón Villanueva
+# License: MIT
+#   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
+
+
 """
 Classes and functions for computing inner products of functions
 """

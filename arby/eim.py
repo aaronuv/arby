@@ -1,3 +1,9 @@
+# --- eim.py ---
+
+# Copyright (c) 2020, Aarón Villanueva
+# License: MIT
+#   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
+
 import numpy as np
 import copy
 
