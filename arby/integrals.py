@@ -1,7 +1,7 @@
 # --- integrals.py ---
 
-"""    
-    Classes and functions for computing inner products of functions
+"""
+Classes and functions for computing inner products of functions
 """
 
 import numpy as np
@@ -53,8 +53,10 @@ def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
 
     # Validate inputs
     input_dict = {"num": num, "rate": rate, "incr": incr}
-    if list(input_dict.values()).count(None) != len(list(input_dict.keys())) - 1:
-        raise Exception("Must give input for only one of num, rate, or incr.")
+    length = len(list(input_dict.keys()))
+    if list(input_dict.values()).count(None) != length - 1:
+        raise Exception("Must give input for only one of num, rate, "
+                        "or incr.")
 
     assert type(interval) in [
         list,
@@ -79,7 +81,7 @@ def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
     # Generate nodes and weights for requested sampling
     nodes, weights = [], []
     for ii in range(len_arg):
-        a, b = interval[ii : ii + 2]
+        a, b = interval[ii: ii + 2]
         n, w = rule_dict[key](a, b, value[ii])
         nodes.append(n)
         weights.append(w)
@@ -111,7 +113,8 @@ def _nodes_weights(interval=None, num=None, rate=None, incr=None, rule=None):
     ]:
         all_nodes, all_weights = QuadratureRules()[rule](interval, num=num)
     else:
-        raise Exception("Requested quadrature rule (`%s`) not available." % rule)
+        raise Exception("Requested quadrature rule (`%s`) not available."
+                        % rule)
 
     return all_nodes, all_weights, rule
 
@@ -386,7 +389,8 @@ class QuadratureRules(object):
         return [nodes * (b - a) / 2.0 + (b + a) / 2.0, weights * (b - a) / 2.0]
 
     def legendre(self, interval, num):
-        raise Exception("Legendre-Gauss quadrature rule is not yet implemented.")
+        raise Exception("Legendre-Gauss quadrature rule is not "
+                        "yet implemented.")
 
     def _legendre(self, a, b, n):
         pass
@@ -426,7 +430,8 @@ class Integration(object):
         else:
             if num is not None or rate is not None or incr is not None:
                 print(
-                    "\n>>>Warning: Using given nodes and weights to build quadrature rule."
+                      "\n>>>Warning: Using given nodes and weights "
+                      "to build quadrature rule."
                 )
             self.nodes, self.weights = nodes, weights
 
@@ -484,7 +489,8 @@ class Integration(object):
     def _test_monomial(self, n=0):
         """Test integration rule by integrating the monomial x**n"""
         ans = self.integral(self.nodes ** n)
-        # FIXME: a, b are not part of the quadrature nodes for the Chebyshev rule.
+        # FIXME: a, b are not part of the quadrature nodes for the
+        # Chebyshev rule.
         a, b = self.nodes[0], self.nodes[-1]
         expd = (b ** (n + 1.0) - a ** (n + 1.0)) / (n + 1.0)
 
