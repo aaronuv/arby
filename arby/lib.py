@@ -2,7 +2,8 @@
 Helper functions used by several modules.
 """
 
-import numpy as np, h5py
+import numpy as np
+import h5py
 
 # from scipy.misc import factorial
 
@@ -14,7 +15,8 @@ def partitions(n, K):
 
 
 def random_partitions(n, K):
-    """Split array with n samples into K (nearly) equal partitions of non-overlapping random subsets"""
+    """Split array with n samples into K (nearly) equal partitions of "
+       "non-overlapping random subsets"""
     assert n >= K, "Number of folds must not exceed number of samples."
 
     # Make array with unique random integers
@@ -98,7 +100,8 @@ def plot(plot_type, ax, data, args):
         ax.loglog(*data, **args)
     else:
         print(
-            "Plot type not recognized. Choose between plot, semilogy, semilogx, or loglog."
+            "Plot type not recognized. Choose between plot, semilogy, "
+            "semilogx, or loglog."
         )
 
     return ax
