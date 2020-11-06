@@ -11,6 +11,10 @@ script:
 
 jobs:
     include:
+        
+        - env: TOXENV=style
+          python: 3.8
+
         - env: TOXENV=coverage
           python: 3.8
 
