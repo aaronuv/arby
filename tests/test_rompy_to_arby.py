@@ -14,10 +14,10 @@ class TestBesselExample(unittest.TestCase):
 
         nbasis, npoints = self.basis.shape
         # set integration rule
-        integration = arby.integrals.Integration([0, 1], num=npoints,
+        integration = arby.Integration([0, 1], num=npoints,
                                                  rule="riemann")
         # build reduced basis
-        rb = arby.greedy.ReducedBasis(integration)
+        rb = arby.ReducedBasis(integration)
         rb.make(self.training, 0, 1e-14, verbose=False)
         # compare
         self.assertTrue(np.allclose(rb.basis, self.basis,
@@ -28,7 +28,7 @@ class TestBesselExample(unittest.TestCase):
 
         rompy_eim_nodes = np.array([0, 100, 2, 36, 9, 72, 1, 20, 89, 4])
         # Compute eim nodes for Bessel functions
-        eim_bessel = arby.eim.EmpiricalMethods(self.basis)
+        eim_bessel = arby.EmpiricalMethods(self.basis)
         eim_bessel.eim()
         # compare
         self.assertTrue((rompy_eim_nodes == eim_bessel.indices).all())
