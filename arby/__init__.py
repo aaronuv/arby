@@ -6,3 +6,4 @@ from .integrals import Integration
 from .greedy import ReducedBasis
 from .eim import EmpiricalMethods
 
+__all__ = [Integration, ReducedBasis, EmpiricalMethods]
