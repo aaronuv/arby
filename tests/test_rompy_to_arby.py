@@ -15,7 +15,7 @@ class TestBesselExample(unittest.TestCase):
         nbasis, npoints = self.basis.shape
         # set integration rule
         integration = arby.Integration([0, 1], num=npoints,
-                                                 rule="riemann")
+                                       rule="riemann")
         # build reduced basis
         rb = arby.ReducedBasis(integration)
         rb.make(self.training, 0, 1e-14, verbose=False)
