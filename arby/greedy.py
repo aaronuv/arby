@@ -10,8 +10,8 @@ Classes for building reduced basis greedy algorithms
 __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 
 import numpy as np
-from .lib import malloc
 import time
+
 
 #############################################
 # Class for iterated, modified Gram-Schmidt #
@@ -115,9 +115,10 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 
         self.normsQ = normsQ
         if self.normsQ:
-            self.norms = malloc(self.functions.dtype, self.Nbasis)
+            self.norms = np.empty(self.Nbasis, dtype=self.functions.dtype)
 
-        self.basis = malloc(self.functions.dtype, self.Nbasis, self.Nnodes)
+        self.basis = np.empty(tuple(self.Nbasis, self.Nnodes),
+                              dtype=self.functions.dtype)
 
     def iter(self, step, h, a=0.5, max_iter=3):
         """One iteration of the iterated, modified Gram-Schmidt algorithm"""
@@ -159,18 +160,18 @@ class _ReducedBasis(object):
     def __init__(self, inner):
         self.inner = inner
 
-    def malloc(self, Nbasis, Npoints, Nquads, Nmodes=1, dtype="complex"):
+    def allocate(self, Nbasis, Npoints, Nquads, Nmodes=1, dtype="complex"):
         """Allocate memory for numpy arrays used for making reduced basis"""
-        self.errors = malloc("double", Nbasis)
-        self.indices = malloc("int", Nbasis)
+        self.errors = np.empty(Nbasis, dtype="double")
+        self.indices = np.empty(Nbasis, dtype="int")
         if Nmodes == 1:
-            self.basis = malloc(dtype, Nbasis, Nquads)
+            self.basis = np.empty((Nbasis, Nquads), dtype=dtype)
         elif Nmodes > 1:
-            self.basis = malloc(dtype, Nbasis, Nmodes, Nquads)
+            self.basis = np.empty((Nbasis, Nmodes, Nquads), dtype=dtype)
         else:
             raise Exception("Expected positive number of modes.")
-        self.basisnorms = malloc("double", Nbasis)
-        self.alpha = malloc(dtype, Nbasis, Npoints)
+        self.basisnorms = np.empty(Nbasis, dtype="double")
+        self.alpha = np.empty((Nbasis, Npoints), dtype=dtype)
 
     def _alpha(self, e, h):
         """Inner product of a basis function e with a function h:
@@ -375,8 +376,8 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
         # Allocate memory for greedy algorithm arrays
         dtype = type(np.asarray(training_space).flatten()[0])
-        self.malloc(self._Nbasis, Npoints, Nsamples, Nmodes=Nmodes,
-                    dtype=dtype)
+        self.allocate(self._Nbasis, Npoints, Nsamples, Nmodes=Nmodes,
+                      dtype=dtype)
 
         # Seed
         if Nbasis > 0:
