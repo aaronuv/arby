@@ -117,7 +117,7 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
         if self.normsQ:
             self.norms = np.empty(self.Nbasis, dtype=self.functions.dtype)
 
-        self.basis = np.empty(tuple(self.Nbasis, self.Nnodes),
+        self.basis = np.empty((self.Nbasis, self.Nnodes),
                               dtype=self.functions.dtype)
 
     def iter(self, step, h, a=0.5, max_iter=3):
