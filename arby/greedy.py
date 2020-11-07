@@ -19,7 +19,7 @@ import time
 #############################################
 
 
-class _IteratedModifiedGramSchmidt(object):
+class _IteratedModifiedGramSchmidt:
     """Iterated modified Gram-Schmidt algorithm for building an orthonormal
     basis. Algorithm from Hoffman, `Iterative Algorithms for Gram-Schmidt
     Orthogonalization`.
@@ -50,31 +50,19 @@ class _IteratedModifiedGramSchmidt(object):
 
         return [e / new_norm, new_norm]
 
-    def make_basis(self, hs, norms=False, a=0.5, max_iter=3):
+    def make_basis(self, hs, a=0.5, max_iter=3):
         """Given a set of functions, hs, find the corresponding orthonormal
         set of basis functions."""
 
         dim = np.shape(hs)
-        basis = np.zeros_like(hs)
+        basis = np.empty_like(hs)
         basis[0] = self.inner.normalize(hs[0])
-        if norms:
-            norm = np.zeros(dim[0], dtype="double")
-            norm[0] = self.inner.norm(hs[0])
-
+        
         for ii in range(1, dim[0]):
-            if norms:
-                basis[ii], norm[ii] = self.add_basis(
-                    hs[ii], basis[:ii], a=a, max_iter=max_iter
-                )
-            else:
-                basis[ii], _ = self.add_basis(
-                    hs[ii], basis[:ii], a=a, max_iter=max_iter
-                )
-
-        if norms:
-            return [np.array(basis), norm]
-        else:
-            return np.array(basis)
+            basis[ii], _ = self.add_basis(hs[ii], basis[:ii],
+                                          a=a, max_iter=max_iter)
+            
+        return np.array(basis)
 
 
 class GramSchmidt(_IteratedModifiedGramSchmidt):
@@ -107,47 +95,35 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
     Output is an array of orthonormal basis elements.
     """
 
-    def __init__(self, vectors, integration, normsQ=False):
+    def __init__(self, vectors, integration):
         self.Nbasis, self.Nnodes = np.shape(vectors)
         self.functions = np.asarray(vectors)
 
         _IteratedModifiedGramSchmidt.__init__(self, integration)
 
-        self.normsQ = normsQ
-        if self.normsQ:
-            self.norms = np.empty(self.Nbasis, dtype=self.functions.dtype)
-
-        self.basis = np.empty((self.Nbasis, self.Nnodes),
-                              dtype=self.functions.dtype)
 
     def iter(self, step, h, a=0.5, max_iter=3):
         """One iteration of the iterated, modified Gram-Schmidt algorithm"""
         ans = self.add_basis(h, self.basis[:step], a=a, max_iter=max_iter)
+        self.basis[step], _ = ans
 
-        if self.normsQ:
-            self.basis[step], self.norms[step + 1] = ans
-        else:
-            self.basis[step], _ = ans
-
-    def make(self, a=0.5, max_iter=3, timerQ=False):
+    def make(self, a=0.5, max_iter=3):
         """Find the corresponding orthonormal set of basis functions."""
+        
+        _, svds, _ = np.linalg.svd(self.functions)
+        
+        if min(svds) < 5e-15:
+            raise Exception("Functions are not linearly independent.")
 
-        self.basis[0] = self.inner.normalize(self.functions[0])
-        if self.normsQ:
-            self.norms[0] = self.inner.norm(self.functions[0])
-
-        if timerQ:
-            t0 = time.time()
-
-        for ii in range(1, self.Nbasis):
-            self.iter(ii, self.functions[ii], a=a, max_iter=max_iter)
-
-        if timerQ:
-            print("\nElapsed time =", time.time() - t0)
-
-        if self.normsQ:
-            return [np.array(self.basis), self.norms]
         else:
+            self.basis = np.empty((self.Nbasis, self.Nnodes),
+                              dtype=self.functions.dtype)
+        
+            self.basis[0] = self.inner.normalize(self.functions[0])
+
+            for ii in range(1, self.Nbasis):
+                self.iter(ii, self.functions[ii], a=a, max_iter=max_iter)
+
             return np.array(self.basis)
 
 
@@ -156,7 +132,7 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 #############################################
 
 
-class _ReducedBasis(object):
+class _ReducedBasis:
     def __init__(self, inner):
         self.inner = inner
 
@@ -435,8 +411,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         tol,
         num=None,
         rel=False,
-        verbose=False,
-        timer=False,
+        verbose=False
     ):
         """Make a reduced basis using the standard greedy algorithm.
 
@@ -449,9 +424,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
                           (default is None)
         verbose        -- print projection errors to screen
                           (default is False)
-        timer          -- print elapsed time
-                          (default is False)
-
+       
         Examples
         --------
         If rb is the StandardRB class instance, 0 the seed index, and
@@ -480,9 +453,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         # The standard greedy algorithm with fixed training set
         if verbose and self._Nbasis > 0:
             print("\nStep", "\t", "Error")
-        if timer:
-            t0 = time.time()
-
+        
         if rel:
             # tol *= np.max(self._norms)**2
             tol *= self.errors[0]
@@ -525,9 +496,6 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
                 break
             # otherwise, increment the counter
             nn += 1
-
-        if timer:
-            print("\nElapsed time =", time.time() - t0)
 
         # Trim excess allocated entries
         self.size = nn
