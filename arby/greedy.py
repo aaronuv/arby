@@ -10,7 +10,6 @@ Classes for building reduced basis greedy algorithms
 __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 
 import numpy as np
-import time
 
 
 #############################################
@@ -57,11 +56,11 @@ class _IteratedModifiedGramSchmidt:
         dim = np.shape(hs)
         basis = np.empty_like(hs)
         basis[0] = self.inner.normalize(hs[0])
-        
+
         for ii in range(1, dim[0]):
             basis[ii], _ = self.add_basis(hs[ii], basis[:ii],
                                           a=a, max_iter=max_iter)
-            
+
         return np.array(basis)
 
 
@@ -101,7 +100,6 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 
         _IteratedModifiedGramSchmidt.__init__(self, integration)
 
-
     def iter(self, step, h, a=0.5, max_iter=3):
         """One iteration of the iterated, modified Gram-Schmidt algorithm"""
         ans = self.add_basis(h, self.basis[:step], a=a, max_iter=max_iter)
@@ -109,16 +107,16 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 
     def make(self, a=0.5, max_iter=3):
         """Find the corresponding orthonormal set of basis functions."""
-        
+
         _, svds, _ = np.linalg.svd(self.functions)
-        
+
         if min(svds) < 5e-15:
             raise Exception("Functions are not linearly independent.")
 
         else:
             self.basis = np.empty((self.Nbasis, self.Nnodes),
-                              dtype=self.functions.dtype)
-        
+                                  dtype=self.functions.dtype)
+
             self.basis[0] = self.inner.normalize(self.functions[0])
 
             for ii in range(1, self.Nbasis):
@@ -424,7 +422,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
                           (default is None)
         verbose        -- print projection errors to screen
                           (default is False)
-       
+
         Examples
         --------
         If rb is the StandardRB class instance, 0 the seed index, and
@@ -453,7 +451,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         # The standard greedy algorithm with fixed training set
         if verbose and self._Nbasis > 0:
             print("\nStep", "\t", "Error")
-        
+
         if rel:
             # tol *= np.max(self._norms)**2
             tol *= self.errors[0]
