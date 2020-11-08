@@ -6,7 +6,7 @@
 
 import numpy as np
 import copy
-
+# sfadf
 
 def two_norm(v):
     return np.linalg.norm(v, 2)

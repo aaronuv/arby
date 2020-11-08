@@ -11,6 +11,8 @@ __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 
 import numpy as np
 
+# sfs fsd 
+
 
 #############################################
 # Class for iterated, modified Gram-Schmidt #
