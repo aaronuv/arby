@@ -24,5 +24,6 @@ class TestArby(unittest.TestCase):
         self.assertEqual(rb.basis.ndim, 2)
         self.assertEqual(rb.basis.shape[1], npoints)
 
+
 if __name__ == "__main__":
     unittest.main()
