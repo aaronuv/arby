@@ -7,17 +7,14 @@ class TestArby(unittest.TestCase):
     def test_basis_shape(self):
         "Test correct shape for reduced basis"
         from scipy.special import jv as BesselJ
-
         npoints = 101
-        # Sample parameter nu between 0 and 10
+        # Sample parameter nu and physical variable x
         nu = np.linspace(0, 10, num=npoints)
-        # set integration rule
-        integration = arby.integrals.Integration([0, 1], num=npoints,
-                                                 rule="riemann")
+        x = np.linspace(0, 1, 101)
         # build traning space
-        training = np.array([BesselJ(nn, integration.nodes) for nn in nu])
+        training = np.array([BesselJ(nn, x) for nn in nu])
         # build reduced basis
-        rb = arby.greedy.ReducedBasis(integration)
+        rb = arby.greedy.ReducedBasis([0, 1], num=npoints, rule="riemann")
         rb.make(training, 0, 1e-14, verbose=False)
 
         # Assert that basis has correct shape

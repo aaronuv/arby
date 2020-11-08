@@ -11,7 +11,7 @@ __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 
 
 import numpy as np
-
+from .integrals import Integration
 
 #############################################
 # Class for iterated, modified Gram-Schmidt #
@@ -258,25 +258,23 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
     in the for-loop above.
     """
-
-    def __init__(self, inner=None, loss="L2"):
+    def __init__(self, interval, num, rule="riemann", loss="L2"):
         """
         loss -- the loss function to use for measuring the error
              between training data and its projection onto the
              reduced basis
              (default is 'L2' norm)
         """
+        comp_integration = Integration(interval=interval, num=num,
+                                       rule=rule)
+        self.inner = comp_integration
+        _ReducedBasis.__init__(self, comp_integration)
+        _IteratedModifiedGramSchmidt.__init__(self, comp_integration)
 
-        if inner is not None:
-            self.inner = inner
-            _ReducedBasis.__init__(self, inner)
-            _IteratedModifiedGramSchmidt.__init__(self, inner)
-
-            assert type(loss) is str, "Expecting string for "
-            "variable`loss`."
-            self.loss = self.proj_errors_from_alpha
-        else:
-            print("No integration rule given.")
+        assert type(loss) is str, "Expecting string for variable`loss`."
+        self.loss = self.proj_errors_from_alpha
+#        else:
+#            print("No integration rule given.")
 
     def seed(self, Nbasis, training_space, seed):
         """Seed the greedy algorithm.

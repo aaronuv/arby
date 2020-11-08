@@ -11,12 +11,9 @@ class TestBesselExample(unittest.TestCase):
     def test_regression_reduced_basis(self):
         "Test that the reduced basis matches ROMpy's for the same "
         "training data"
-
         nbasis, npoints = self.basis.shape
-        # set integration rule
-        integration = arby.Integration([0, 1], num=npoints, rule="riemann")
         # build reduced basis
-        rb = arby.ReducedBasis(integration)
+        rb = arby.ReducedBasis([0, 1], num=npoints, rule="riemann")
         rb.make(self.training, 0, 1e-14, verbose=False)
         # compare
         self.assertTrue(np.allclose(rb.basis, self.basis,
@@ -24,7 +21,6 @@ class TestBesselExample(unittest.TestCase):
 
     def test_regression_EIM(self):
         "Test that EIM matches ROMpy's for the same training data"
-
         rompy_eim_nodes = np.array([0, 100, 2, 36, 9, 72, 1, 20, 89, 4])
         # Compute eim nodes for Bessel functions
         eim_bessel = arby.EmpiricalMethods(self.basis)
