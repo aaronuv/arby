@@ -32,14 +32,6 @@ class TestBesselExample(unittest.TestCase):
         # compare
         self.assertTrue((rompy_eim_nodes == eim_bessel.indices).all())
 
-    def test_GS(self):
-        nbasis, npoints = self.basis.shape
-        integration = arby.Integration([0, 1], num=npoints, rule="riemann")
-        GS_basis = arby.GramSchmidt(self.basis, integration)
-        GS_basis.make()
-        self.assertTrue(np.allclose(GS_basis.basis, self.basis,
-                                    rtol=1e-5, atol=1e-8))
-
 
 if __name__ == "__main__":
     unittest.main()

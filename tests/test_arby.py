@@ -24,6 +24,16 @@ class TestArby(unittest.TestCase):
         self.assertEqual(rb.basis.ndim, 2)
         self.assertEqual(rb.basis.shape[1], npoints)
 
+    def test_GS(self):
+        expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
+        nbasis, npoints = expected_basis.shape
+        integration = arby.Integration([0, 1], num=npoints, rule="riemann")
+        GS_basis = arby.GramSchmidt(expected_basis, integration)
+        GS_basis.make()
+        computed_basis = GS_basis.basis
+        self.assertTrue(np.allclose(computed_basis, expected_basis,
+                                    rtol=1e-5, atol=1e-8))
+
 
 class TestIntegrals(unittest.TestCase):
     def test_Integration_inputs(self):
