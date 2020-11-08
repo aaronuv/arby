@@ -131,87 +131,7 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 # Class for reduced basis greedy algorithms #
 #############################################
 
-
-class _ReducedBasis:
-    def __init__(self, inner):
-        self.inner = inner
-
-    def allocate(self, Nbasis, Npoints, Nquads, Nmodes=1, dtype="complex"):
-        """Allocate memory for numpy arrays used for making reduced basis"""
-        self.errors = np.empty(Nbasis, dtype="double")
-        self.indices = np.empty(Nbasis, dtype="int")
-        if Nmodes == 1:
-            self.basis = np.empty((Nbasis, Nquads), dtype=dtype)
-        elif Nmodes > 1:
-            self.basis = np.empty((Nbasis, Nmodes, Nquads), dtype=dtype)
-        else:
-            raise Exception("Expected positive number of modes.")
-        self.basisnorms = np.empty(Nbasis, dtype="double")
-        self.alpha = np.empty((Nbasis, Npoints), dtype=dtype)
-
-    def _alpha(self, e, h):
-        """Inner product of a basis function e with a function h:
-        alpha(e,h) = <e, h>
-        """
-        return self.inner.dot(e, h)
-
-    def alpha_arr(self, e, hs):
-        """Inner products of a basis function e with an array of functions
-        hs"""
-        return np.array([self._alpha(e, hh) for hh in hs])
-
-    def proj_error_from_basis(self, basis, h):
-        """Square of the projection error of a function h on basis"""
-        norm = self.inner.norm(h).real
-        dim = len(basis[:, 0])
-        ans = 0.0
-        for ii in range(dim):
-            ans += np.abs(self._alpha(basis[ii], h)) ** 2
-        return norm ** 2 - ans
-
-    def proj_errors_from_basis(self, basis, hs):
-        """Square of the projection error of functions hs on basis"""
-        return [self.proj_error_from_basis(basis, hh) for hh in hs]
-
-    def proj_errors_from_alpha(self, alpha, norms=None):
-        """Square of the projection error of a function h on basis in terms
-        of pre-computed alpha matrix"""
-        if norms is None:
-            norms = np.ones(len(alpha[0]), dtype="double")
-        ans = 0.0
-        for aa in alpha:
-            ans += np.abs(aa) ** 2
-        return norms ** 2 - ans
-
-    def projection_from_basis(self, h, basis):
-        """Project a function h onto the basis functions"""
-        ans = 0.0
-        for ee in basis:
-            ans += ee * self._alpha(ee, h)
-        return ans
-
-    def projection_from_alpha(self, alpha, basis):
-        """Project a function h onto the basis functions using the
-        precomputed quantity alpha = <basis, h>"""
-        ans = 0.0
-        for ii, ee in basis:
-            ans += ee * alpha[ii]
-        return ans
-
-    def _Alpha(self, E, e, alpha):
-        return self.inner.dot(E, self.projection_from_alpha(alpha, e))
-
-    def Alpha_arr(self, E, e, alpha):
-        return np.array([self._Alpha(EE, e, alpha) for EE in E])
-
-    def partition_proj_errors_from_alpha(self, E, e, alpha):
-        A = self.Alpha_arr(E, e, alpha)
-        return np.sum(np.abs(aa) ** 2 for aa in alpha) - np.sum(
-            np.abs(AA) ** 2 for AA in A
-        )
-
-
-class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
+class ReducedBasis(_IteratedModifiedGramSchmidt):
     """Class for standard reduced basis greedy algorithm.
 
     Input
@@ -268,13 +188,72 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         comp_integration = Integration(interval=interval, num=num,
                                        rule=rule)
         self.inner = comp_integration
-        _ReducedBasis.__init__(self, comp_integration)
+
         _IteratedModifiedGramSchmidt.__init__(self, comp_integration)
 
         assert type(loss) is str, "Expecting string for variable`loss`."
         self.loss = self.proj_errors_from_alpha
-#        else:
-#            print("No integration rule given.")
+
+# --- Aux functions ----------------------------------------------------------
+
+    def allocate(self, Nbasis, Npoints, Nquads, dtype="complex"):
+        """Allocate memory for numpy arrays used for making reduced basis"""
+        self.errors = np.empty(Nbasis, dtype="double")
+        self.indices = np.empty(Nbasis, dtype="int")
+        self.basis = np.empty((Nbasis, Nquads), dtype=dtype)
+        self.basisnorms = np.empty(Nbasis, dtype="double")
+        self.alpha = np.empty((Nbasis, Npoints), dtype=dtype)
+
+    def alpha_arr(self, e, hs):
+        """Inner products of a basis function e with an array of functions
+        hs"""
+        return np.array([self.inner.dot(e, hh) for hh in hs])
+
+    def proj_error_from_basis(self, basis, h):
+        """Square of the projection error of a function h on basis"""
+        norm = self.inner.norm(h).real
+        dim = len(basis[:, 0])
+        ans = 0.0
+        for ii in range(dim):
+            ans += np.abs(self.inner.dot(basis[ii], h)) ** 2
+        return norm ** 2 - ans
+
+    def proj_errors_from_basis(self, basis, hs):
+        """Square of the projection error of functions hs on basis"""
+        return [self.proj_error_from_basis(basis, hh) for hh in hs]
+
+    def proj_errors_from_alpha(self, alpha, norms=None):
+        """Square of the projection error of a function h on basis in terms
+        of pre-computed alpha matrix"""
+        if norms is None:
+            norms = np.ones(len(alpha[0]), dtype="double")
+        ans = 0.0
+        for aa in alpha:
+            ans += np.abs(aa) ** 2
+        return norms ** 2 - ans
+
+    def projection_from_basis(self, h, basis):
+        """Project a function h onto the basis functions"""
+        ans = 0.0
+        for ee in basis:
+            ans += ee * self.inner.dot(ee, h)
+        return ans
+
+    def projection_from_alpha(self, alpha, basis):
+        """Project a function h onto the basis functions using the
+        precomputed quantity alpha = <basis, h>"""
+        ans = 0.0
+        for ii, ee in basis:
+            ans += ee * alpha[ii]
+        return ans
+
+    def _Alpha(self, E, e, alpha):
+        return self.inner.dot(E, self.projection_from_alpha(alpha, e))
+
+    def Alpha_arr(self, E, e, alpha):
+        return np.array([self._Alpha(EE, e, alpha) for EE in E])
+
+# ----------------------------------------------------------------------------
 
     def seed(self, Nbasis, training_space, seed):
         """Seed the greedy algorithm.
@@ -300,14 +279,10 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         """
 
         # Extract dimensions of training space data
-        dim = np.shape(np.asarray(training_space))
-        if len(dim) == 2:
-            Npoints, Nsamples = dim
-            Nmodes = 1
-        elif len(dim) == 3:
-            Npoints, Nmodes, Nsamples = dim
-        else:
-            raise Exception("Unexpected dimensions for training space.")
+        try:
+            Npoints, Nsamples = np.shape(np.asarray(training_space))
+        except(ValueError):
+            print("Unexpected dimensions for training space.")
 
         # Compute norms of training space data
         self._norms = np.array([self.inner.norm(tt) for tt in training_space])
@@ -323,8 +298,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
         # Allocate memory for greedy algorithm arrays
         dtype = type(np.asarray(training_space).flatten()[0])
-        self.allocate(self._Nbasis, Npoints, Nsamples,
-                      Nmodes=Nmodes, dtype=dtype)
+        self.allocate(self._Nbasis, Npoints, Nsamples, dtype=dtype)
 
         # Seed
         if Nbasis > 0:
