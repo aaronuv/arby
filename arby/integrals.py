@@ -21,19 +21,9 @@ def _rate_to_num(a, b, rate):
     return np.floor(np.float(b - a) * rate) + 1
 
 
-def _num_to_rate(a, b, num):
-    """Convert sample numbers in [a,b] to sample rate"""
-    return (num - 1.0) / np.float(b - a)
-
-
 def _incr_to_num(a, b, incr):
     """Convert increment to sample numbers in [a,b]"""
     return _rate_to_num(a, b, 1.0 / incr)
-
-
-def _num_to_incr(a, b, num):
-    """Convert sample numbers in [a,b] to increment"""
-    return 1.0 / _num_to_rate(a, b, num)
 
 
 def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
@@ -41,10 +31,6 @@ def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
 
     # Validate inputs
     input_dict = {"num": num, "rate": rate, "incr": incr}
-    length = len(list(input_dict.keys()))
-    if list(input_dict.values()).count(None) != length - 1:
-        raise Exception("Must give input for only one of num, rate, "
-                        "or incr.")
 
     assert type(interval) in [
         list,
@@ -84,26 +70,17 @@ def _nodes_weights(interval=None, num=None, rate=None, incr=None, rule=None):
     assert interval, "Input to `interval` must not be None."
     values = [num, rate, incr]
     if values.count(None) != 2:
-        raise Exception("Must give input for only one of num, rate, or incr.")
+        raise ValueError("Must give input for only one of num, rate, or incr.")
     if type(rule) is not str:
-        raise Exception("Input to `rule` must be a string.")
+        raise TypeError("Input `rule` must be a string.")
 
     # Generate requested quadrature rule
-    if rule in ["riemann", "trapezoidal"]:
+    if rule in ["riemann"]:
         all_nodes, all_weights = QuadratureRules()[rule](
             interval, num=num, rate=rate, incr=incr
         )
-    elif rule in [
-        "chebyshev",
-        "chebyshev-lobatto",
-        "legendre",
-        "legendre-lobatto",
-    ]:
-        all_nodes, all_weights = QuadratureRules()[rule](interval, num=num)
     else:
-        raise Exception("Requested quadrature rule (`%s`) not available."
-                        % rule)
-
+        raise ValueError(f"Requested quadrature rule ({rule}) not available.")
     return all_nodes, all_weights, rule
 
 
@@ -112,13 +89,12 @@ def _nodes_weights(interval=None, num=None, rate=None, incr=None, rule=None):
 ##############################
 
 
-class QuadratureRules(object):
+class QuadratureRules:
     """Class for generating quadrature rules"""
 
     def __init__(self):
         self._dict = {
-            "riemann": self.riemann,
-            "trapezoidal": self.trapezoidal
+            "riemann": self.riemann
         }
         self.rules = list(self._dict.keys())
 
@@ -148,9 +124,7 @@ class QuadratureRules(object):
         """
 
         rule_dict = {
-            "num": self._riemann_num,
-            "rate": self._riemann_rate,
-            "incr": self._riemann_incr,
+            "num": self._riemann_num
         }
         return _make_rules(interval, rule_dict, num=num, rate=rate, incr=incr)
 
@@ -175,153 +149,9 @@ class QuadratureRules(object):
         weights[-1] = 0.0
         return [nodes, (b - a) / (n - 1.0) * weights]
 
-    def _riemann_rate(self, a, b, rate):
-        """
-        Uniformly sampled array using Riemann quadrature rule
-        over given interval with given sample rate
-
-        Input
-        -----
-        a    -- start of interval
-        b    -- end of interval
-        rate -- sample rate
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        # TODO: Check the assertion on 1/rate
-        assert 1.0 / rate <= abs(
-            b - a
-        ), "Sample spacing is larger than interval. Increase sample rate."
-        n = _rate_to_num(a, b, rate)
-        return self._riemann_num(a, b, n)
-
-    def _riemann_incr(self, a, b, incr):
-        """
-        Uniformly sampled array using Riemann quadrature rule
-        over given interval with given sample spacing
-
-        Input
-        -----
-        a    -- start of interval
-        b    -- end of interval
-        incr -- sample spacing
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        assert incr <= abs(
-            b - a
-        ), "Sample spacing is larger than interval. Decrease increment."
-        n = _incr_to_num(a, b, incr)
-        return self._riemann_num(a, b, n)
-
-    def trapezoidal(self, interval, num=None, rate=None, incr=None):
-        """
-        Uniformly sampled array using the trapezoidal quadrature rule
-        over interval [a,b] with given sample number, sample rate
-        or increment between samples.
-
-        Input
-        -----
-        interval -- list indicating interval(s) for quadrature
-
-        Options (specify only one)
-        -------
-        num  -- number(s) of quadrature points
-        rate -- rate(s) at which points are sampled
-        incr -- spacing(s) between samples
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        rule_dict = {
-            "num": self._trapezoidal_num,
-            "rate": self._trapezoidal_rate,
-            "incr": self._trapezoidal_incr,
-        }
-        return _make_rules(interval, rule_dict, num=num, rate=rate, incr=incr)
-
-    def _trapezoidal_num(self, a, b, n):
-        """
-        Uniformly sampled array using the trapezoidal quadrature rule
-        over given interval with given number of samples
-
-        Input
-        -----
-        a -- start of interval
-        b -- end of interval
-        n -- number of quadrature points
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        nodes = np.linspace(a, b, num=n)
-        weights = np.ones(n, dtype="double")
-        weights[0] = 0.5
-        weights[-1] = 0.5
-        return [nodes, (b - a) / (n - 1.0) * weights]
-
-    def _trapezoidal_rate(self, a, b, rate):
-        """
-        Uniformly sampled array using the trapezoidal quadrature rule
-        over given interval with given sample rate
-
-        Input
-        -----
-        a    -- start of interval
-        b    -- end of interval
-        rate -- sample rate
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        # TODO: Check the assertion on 1/rate
-        assert 1.0 / rate <= abs(
-            b - a
-        ), "Sample spacing is larger than interval. Increase sample rate."
-        n = _rate_to_num(a, b, rate)
-        return self._trapezoidal_num(a, b, n)
-
-    def _trapezoidal_incr(self, a, b, incr):
-        """
-        Uniformly sampled array using the trapezoidal quadrature rule
-        over given interval with given sample spacing
-
-        Input
-        -----
-        a    -- start of interval
-        b    -- end of interval
-        incr -- sample spacing
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-        assert incr <= abs(
-            b - a
-        ), "Sample spacing is larger than interval. Decrease increment."
-        n = _incr_to_num(a, b, incr)
-        return self._trapezoidal_num(a, b, n)
 
 
-###################################################
-# Class for computing inner products of functions #
-###################################################
-
-
-class Integration(object):
+class Integration:
     """Integrals for computing inner products and norms of functions"""
 
     def __init__(
@@ -330,33 +160,20 @@ class Integration(object):
         num=None,
         rate=None,
         incr=None,
-        rule="trapezoidal",
+        rule="riemann",
         nodes=None,
         weights=None,
     ):
-        if nodes is None and weights is None:
-            self.nodes, self.weights, self.rule = _nodes_weights(
-                interval, num, rate, incr, rule
-            )
-            # self._interval = interval
-        else:
-            if num is not None or rate is not None or incr is not None:
-                print(
-                      "\n>>>Warning: Using given nodes and weights "
-                      "to build quadrature rule."
-                )
-            self.nodes, self.weights = nodes, weights
+
+        self.nodes, self.weights, self.rule = _nodes_weights(
+                interval, num, rate, incr, rule)
 
         self.integrals = [
             "integral",
             "dot",
             "norm",
             "normalize",
-            "match",
-            "mismatch",
-            "L2",
-            "Ln",
-            "Linfty",
+            "L2"
         ]
 
     def integral(self, f):
@@ -375,38 +192,6 @@ class Integration(object):
         """Normalize a function"""
         return f / self.norm(f)
 
-    def match(self, f, g):
-        """Match integral"""
-        f_normed = f / self.norm(f)
-        g_normed = g / self.norm(g)
-        return np.dot(self.weights, f_normed.conjugate() * g_normed).real
-
-    def mismatch(self, f, g):
-        """Mismatch integral (1-match)"""
-        return 1.0 - self.match(f, g)
-
-    def Linfty(self, f):
-        """L-infinity norm"""
-        return np.abs(f).max()
-
-    def Ln(self, f, n):
-        """L-n norm"""
-        assert n > 0
-        return (np.dot(self.weights, np.abs(f) ** n)) ** (1.0 / n)
-
     def L2(self, f):
         """L-2 norm"""
         return np.sqrt(np.dot(self.weights, f.conjugate() * f).real)
-
-    def _test_monomial(self, n=0):
-        """Test integration rule by integrating the monomial x**n"""
-        ans = self.integral(self.nodes ** n)
-        # FIXME: a, b are not part of the quadrature nodes for the
-        # Chebyshev rule.
-        a, b = self.nodes[0], self.nodes[-1]
-        expd = (b ** (n + 1.0) - a ** (n + 1.0)) / (n + 1.0)
-
-        print("\nExpected value for integral =", expd)
-        print("Computed value for integral =", ans)
-        print("\nAbsolute difference =", expd - ans)
-        print("Relative difference =", 1.0 - ans / expd)

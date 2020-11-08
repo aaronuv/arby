@@ -25,5 +25,23 @@ class TestArby(unittest.TestCase):
         self.assertEqual(rb.basis.shape[1], npoints)
 
 
+class TestIntegrals(unittest.TestCase):
+    def test_Integration_inputs(self):
+        
+        with self.assertRaises(TypeError):
+            rule_test = 1.
+            npoints = 101
+            integration = arby.integrals.Integration([0, 1], num=npoints,
+                                                 rule=rule_test)
+        with self.assertRaises(ValueError):
+            integration = arby.integrals.Integration([0, 1],
+                                                 rule="riemann")
+        with self.assertRaises(ValueError):
+            npoints = 101
+            rule = 'fake_rule'
+            integration = arby.integrals.Integration([0, 1], num=npoints,
+                                                 rule=rule)
+        
+
 if __name__ == "__main__":
     unittest.main()
