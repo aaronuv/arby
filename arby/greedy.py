@@ -236,49 +236,47 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         self._norms = np.array([self.inner.norm(tt) for tt in training_space])
 
         # Seed
-        self.errors[0] = np.max(self._norms) ** 2
         self.indices[0] = seed
         self.basis[0] = training_space[seed] / self._norms[seed]
         self.basisnorms[0] = self._norms[seed]
         self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
 
-    def iter(self, step, errs, training_space):
-        """One iteration of standard reduced basis greedy algorithm.
+#     def iter(self, step, errs, training_space):
+#         """One iteration of standard reduced basis greedy algorithm.
 
-        Updates the next entries of the errors, indices, basis, and
-        alpha arrays.
+#         Updates the next entries of the errors, indices, basis, and
+#         alpha arrays.
 
-        Input
-        -----
-        step           -- current iteration step
-        errs           -- projection errors across the training space
-        training_space -- the training space of functions
+#         Input
+#         -----
+#         step           -- current iteration step
+#         errs           -- projection errors across the training space
+#         training_space -- the training space of functions
 
-        Examples
-        --------
+#         Examples
+#         --------
 
-        If rb is an instance of StandardRB and iter=13 is the 13th
-        iteration of the greedy algorithm then the following code
-        snippet generates the next (i.e., 14th) entry of the errors,
-        indices, basis, and alpha arrays::
+#         If rb is an instance of StandardRB and iter=13 is the 13th
+#         iteration of the greedy algorithm then the following code
+#         snippet generates the next (i.e., 14th) entry of the errors,
+#         indices, basis, and alpha arrays::
 
-        >>> rb.iter(13)
+#         >>> rb.iter(13)
 
-        """
+#         """
 
-        next_index = np.argmax(errs)
-        if next_index in self.indices:
-            print(">>> Warning(Index already selected): Exiting greedy "
-                  "algorithm.")
-            return 1
-        else:
-            self.indices[step + 1] = np.argmax(errs)
-            self.errors[step + 1] = np.max(errs)
-            self.basis[step + 1], self.basisnorms[step + 1] = self.add_basis(
-                training_space[self.indices[step + 1]], self.basis[: step + 1]
-            )
-            self.alpha[step + 1] = self.alpha_arr(self.basis[step + 1],
-                                                  training_space)
+#         next_index = np.argmax(errs)
+#         if next_index in self.indices:
+#             return 1
+#         else:
+#             self.indices[step + 1] = next_index
+#             self.errors[step + 1] = errs[next_index]
+#             self.basis[step + 1], self.basisnorms[step + 1] = self.add_basis(
+#                 training_space[self.indices[step + 1]], self.basis[: step + 1]
+#             )
+#             self.alpha[step + 1] = self.alpha_arr(self.basis[step + 1],
+#                                                   training_space)
+#             return 0
 
     def make(self, training_space, index_seed, tol, verbose=False):
         """Make a reduced basis using the standard greedy algorithm.
@@ -305,41 +303,34 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
 
         """
         training_num = len(training_space)
-        # Seed the greedy algorithm
+
         self.seed(training_space, index_seed)
 
-        # The standard greedy algorithm with fixed training set
         if verbose:
             print("\nStep", "\t", "Error")
 
-        nn, flag = 0, 0
-        while nn < training_num:
-            if verbose:
-                print(nn + 1, "\t", self.errors[nn])
-
-            # Check if tolerance is met
-            if self.errors[nn] <= tol:
-                if nn == 0:
-                    nn += 1
-                break
-            # or if the number of basis vectors has been reached
-            elif nn == training_num - 1:
-                nn += 1
-                break
-            # otherwise, add another point and basis vector
-            else:
-                # Single iteration and update errors, indices, basis, alpha
-                # arrays
-                errs = self.loss(self.alpha[: nn + 1], norms=self._norms)
-                flag = self.iter(nn, errs, training_space)
-
-            # If previously selected index is selected again then exit
-            if flag == 1:
-                nn += 1
-                break
-            # otherwise, increment the counter
+        nn = 0
+        sigma = 1.
+        while sigma > tol:
             nn += 1
-
+            errs = self.loss(self.alpha[: nn], norms=self._norms)
+            next_index = np.argmax(errs)
+            
+            if next_index in self.indices:
+                print(">>> Warning(Index already selected): Exiting greedy "
+                      "algorithm.")
+                break
+            else:
+                self.indices[nn] = next_index
+                self.errors[nn - 1] = errs[next_index]
+                self.basis[nn], self.basisnorms[nn] = self.add_basis(
+                    training_space[self.indices[nn]], self.basis[:nn]
+                )
+                self.alpha[nn] = self.alpha_arr(self.basis[nn],
+                                                      training_space)
+            sigma = errs[next_index]
+            if verbose:
+                print(nn, "\t", sigma)
         # Trim excess allocated entries
         self.size = nn
         self.trim(self.size)
