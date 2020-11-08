@@ -106,7 +106,7 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
         ans = self.add_basis(h, self.basis[:step], a=a, max_iter=max_iter)
         self.basis[step], _ = ans
 
-    def make(self, a=0.5, max_iter=3):
+    def build_basis(self, a=0.5, max_iter=3):
         """Find the corresponding orthonormal set of basis functions."""
 
         _, svds, _ = np.linalg.svd(self.functions)
@@ -133,176 +133,19 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 
 class ReducedBasis(_IteratedModifiedGramSchmidt):
     """Class for standard reduced basis greedy algorithm.
-
-    Input
-    -----
-    inner  -- method of InnerProduct instance
-
-    Methods
-    ---------
-    seed -- seed the greedy algorithm
-    iter -- one iteration of the greedy algorithm
-    make -- implement the greedy algorithm from beginning to end
-    trim -- trim zeros from remaining allocated entries
-
-    Examples
-    --------
-    Create a ReducedBasis object for functions with unit norm::
-
-    >>> rb = rp.ReducedBasis(inner)
-
-    Let T be the training space of functions, 0 be the seed index,
-    and 1e-12 be the tolerance. The standard reduced basis greedy
-    algorithm is::
-
-    >>> rb.seed(0, T)
-    >>> for i in range(Nbasis):
-    >>> ...if rb.errors[i] <= 1e-12:
-    >>> ......break
-    >>> ...rb.iter(i,T)
-    >>> rb.trim(i)
-
-    For convenience, this algorithm is equivalently implemented in
-    `make`::
-
-    >>> rb.make(T, 0, 1e-12)
-
-    Let T' be a different training space. The greedy algorithm can
-    be run again on T' using::
-
-    >>> rb.make(T', 0, 1e-12)
-
-    or, alternatively, at each iteration using::
-
-    >>> ...rb.iter(i,T')
-
-    in the for-loop above.
     """
-    def __init__(self, interval, num, rule="riemann", loss="L2"):
-        """
-        loss -- the loss function to use for measuring the error
-             between training data and its projection onto the
-             reduced basis
-             (default is 'L2' norm)
-        """
+    def __init__(self, interval, num, rule="riemann"):
+
         comp_integration = Integration(interval=interval, num=num,
                                        rule=rule)
         self.inner = comp_integration
 
         _IteratedModifiedGramSchmidt.__init__(self, comp_integration)
 
-        assert type(loss) is str, "Expecting string for variable`loss`."
-        self.loss = self.proj_errors_from_alpha
-
-    def seed(self, training_space, seed):
-        """Seed the greedy algorithm.
-
-        Seeds the first entries in the errors, indices, basis, and alpha
-        arrays for use with the standard greedy algorithm for producing a
-        reduced basis representation.
-
-        Input
-        -----
-        Nbasis         -- number of requested basis vectors to make
-        training_space -- the training space of functions
-        seed           -- array index for seed point in training set
-
-        Examples
-        --------
-
-        If rb is an instance of StandardRB, 0 is the array index associated
-        with the seed, and T is the training set then do::
-
-        >>> rb.seed(0, T)
-
-        """
-
-        # Extract dimensions of training space data
-        try:
-            Npoints, Nsamples = np.shape(np.asarray(training_space))
-        except(ValueError):
-            print("Unexpected dimensions for training space.")
-
-        # Validate inputs
-        assert Nsamples == np.size(
-            self.inner.weights
-        ), "Number of samples is inconsistent with quadrature rule."
-
-        # Allocate memory for greedy algorithm arrays
-        dtype = type(np.asarray(training_space).flatten()[0])
-        self.allocate(Npoints, Nsamples, dtype=dtype)
-
-        # Compute norms of training space data
-        self._norms = np.array([self.inner.norm(tt) for tt in training_space])
-
-        # Seed
-        self.indices[0] = seed
-        self.basis[0] = training_space[seed] / self._norms[seed]
-        self.basisnorms[0] = self._norms[seed]
-        self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
-
-#     def iter(self, step, errs, training_space):
-#         """One iteration of standard reduced basis greedy algorithm.
-
-#         Updates the next entries of the errors, indices, basis, and
-#         alpha arrays.
-
-#         Input
-#         -----
-#         step           -- current iteration step
-#         errs           -- projection errors across the training space
-#         training_space -- the training space of functions
-
-#         Examples
-#         --------
-
-#         If rb is an instance of StandardRB and iter=13 is the 13th
-#         iteration of the greedy algorithm then the following code
-#         snippet generates the next (i.e., 14th) entry of the errors,
-#         indices, basis, and alpha arrays::
-
-#         >>> rb.iter(13)
-
-#         """
-
-#         next_index = np.argmax(errs)
-#         if next_index in self.indices:
-#             return 1
-#         else:
-#             self.indices[step + 1] = next_index
-#             self.errors[step + 1] = errs[next_index]
-#             self.basis[step + 1], self.basisnorms[step + 1] = self.add_basis(
-#                 training_space[self.indices[step + 1]], self.basis[: step + 1]
-#             )
-#             self.alpha[step + 1] = self.alpha_arr(self.basis[step + 1],
-#                                                   training_space)
-#             return 0
-
-    def make(self, training_space, index_seed, tol, verbose=False):
+    def build_rb(self, training_space, index_seed, tol, verbose=False):
         """Make a reduced basis using the standard greedy algorithm.
-
-        Input
-        -----
-        training_space -- the training space of functions
-        index_seed     -- array index for seed point in training set
-        tol            -- tolerance that terminates the greedy algorithm
-        verbose        -- print projection errors to screen
-                          (default is False)
-
-        Examples
-        --------
-        If rb is the StandardRB class instance, 0 the seed index, and
-        T the training set then do::
-
-        >>> rb.make(T, 0, 1e-12)
-
-        To prevent displaying any print to screen, set the `verbose`
-        keyword argument to `False`::
-
-        >>> rb.make(T, 0, 1e-12, verbose=False)
-
-        """
-        training_num = len(training_space)
+        """        
+        self.loss = self.proj_errors_from_alpha
 
         self.seed(training_space, index_seed)
 
@@ -334,6 +177,35 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         # Trim excess allocated entries
         self.size = nn
         self.trim(self.size)
+
+        
+    def seed(self, training_space, seed):
+        """Seed the greedy algorithm.
+        """
+
+        # Extract dimensions of training space data
+        try:
+            Npoints, Nsamples = np.shape(np.asarray(training_space))
+        except(ValueError):
+            print("Unexpected dimensions for training space.")
+
+        # Validate inputs
+        assert Nsamples == np.size(
+            self.inner.weights
+        ), "Number of samples is inconsistent with quadrature rule."
+
+        # Allocate memory for greedy algorithm arrays
+        dtype = type(np.asarray(training_space).flatten()[0])
+        self.allocate(Npoints, Nsamples, dtype=dtype)
+
+        # Compute norms of training space data
+        self._norms = np.array([self.inner.norm(tt) for tt in training_space])
+
+        # Seed
+        self.indices[0] = seed
+        self.basis[0] = training_space[seed] / self._norms[seed]
+        self.basisnorms[0] = self._norms[seed]
+        self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
 
 # --- Aux functions ----------------------------------------------------------
 

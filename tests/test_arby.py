@@ -15,7 +15,7 @@ class TestArby(unittest.TestCase):
         training = np.array([BesselJ(nn, x) for nn in nu])
         # build reduced basis
         rb = arby.greedy.ReducedBasis([0, 1], num=npoints, rule="riemann")
-        rb.make(training, 0, 1e-14, verbose=False)
+        rb.build_rb(training, 0, 1e-14, verbose=False)
 
         # Assert that basis has correct shape
         self.assertEqual(rb.basis.ndim, 2)
@@ -26,7 +26,7 @@ class TestArby(unittest.TestCase):
         nbasis, npoints = expected_basis.shape
         integration = arby.Integration([0, 1], num=npoints, rule="riemann")
         GS_basis = arby.GramSchmidt(expected_basis, integration)
-        GS_basis.make()
+        GS_basis.build_basis()
         computed_basis = GS_basis.basis
         self.assertTrue(np.allclose(computed_basis, expected_basis,
                                     rtol=1e-5, atol=1e-8))
