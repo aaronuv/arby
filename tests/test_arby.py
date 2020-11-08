@@ -27,21 +27,20 @@ class TestArby(unittest.TestCase):
 
 class TestIntegrals(unittest.TestCase):
     def test_Integration_inputs(self):
-        
+
         with self.assertRaises(TypeError):
-            rule_test = 1.
+            rule_test = 1.0
             npoints = 101
-            integration = arby.integrals.Integration([0, 1], num=npoints,
-                                                 rule=rule_test)
+            arby.integrals.Integration(
+                [0, 1], num=npoints, rule=rule_test
+            )
         with self.assertRaises(ValueError):
-            integration = arby.integrals.Integration([0, 1],
-                                                 rule="riemann")
+            arby.integrals.Integration([0, 1], rule="riemann")
         with self.assertRaises(ValueError):
             npoints = 101
-            rule = 'fake_rule'
-            integration = arby.integrals.Integration([0, 1], num=npoints,
-                                                 rule=rule)
-        
+            rule = "fake_rule"
+            arby.integrals.Integration([0, 1], num=npoints, rule=rule)
+
 
 if __name__ == "__main__":
     unittest.main()

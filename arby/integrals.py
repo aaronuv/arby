@@ -16,6 +16,7 @@ import numpy as np
 # Some helper functions #
 #########################
 
+
 def _rate_to_num(a, b, rate):
     """Convert sample rate to sample numbers in [a,b]"""
     return np.floor(np.float(b - a) * rate) + 1
@@ -93,9 +94,7 @@ class QuadratureRules:
     """Class for generating quadrature rules"""
 
     def __init__(self):
-        self._dict = {
-            "riemann": self.riemann
-        }
+        self._dict = {"riemann": self.riemann}
         self.rules = list(self._dict.keys())
 
     def __getitem__(self, rule):
@@ -123,9 +122,7 @@ class QuadratureRules:
         weights -- quadrature weights
         """
 
-        rule_dict = {
-            "num": self._riemann_num
-        }
+        rule_dict = {"num": self._riemann_num}
         return _make_rules(interval, rule_dict, num=num, rate=rate, incr=incr)
 
     def _riemann_num(self, a, b, n):
@@ -150,7 +147,6 @@ class QuadratureRules:
         return [nodes, (b - a) / (n - 1.0) * weights]
 
 
-
 class Integration:
     """Integrals for computing inner products and norms of functions"""
 
@@ -166,15 +162,10 @@ class Integration:
     ):
 
         self.nodes, self.weights, self.rule = _nodes_weights(
-                interval, num, rate, incr, rule)
+            interval, num, rate, incr, rule
+        )
 
-        self.integrals = [
-            "integral",
-            "dot",
-            "norm",
-            "normalize",
-            "L2"
-        ]
+        self.integrals = ["integral", "dot", "norm", "normalize", "L2"]
 
     def integral(self, f):
         """Integral of a function"""

@@ -14,8 +14,7 @@ class TestBesselExample(unittest.TestCase):
 
         nbasis, npoints = self.basis.shape
         # set integration rule
-        integration = arby.Integration([0, 1], num=npoints,
-                                       rule="riemann")
+        integration = arby.Integration([0, 1], num=npoints, rule="riemann")
         # build reduced basis
         rb = arby.ReducedBasis(integration)
         rb.make(self.training, 0, 1e-14, verbose=False)
@@ -35,8 +34,7 @@ class TestBesselExample(unittest.TestCase):
 
     def test_GS(self):
         nbasis, npoints = self.basis.shape
-        integration = arby.Integration([0, 1], num=npoints,
-                                       rule="riemann")
+        integration = arby.Integration([0, 1], num=npoints, rule="riemann")
         GS_basis = arby.GramSchmidt(self.basis, integration)
         GS_basis.make()
         self.assertTrue(np.allclose(GS_basis.basis, self.basis,

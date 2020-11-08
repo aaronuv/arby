@@ -115,8 +115,9 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
             raise Exception("Functions are not linearly independent.")
 
         else:
-            self.basis = np.empty((self.Nbasis, self.Nnodes),
-                                  dtype=self.functions.dtype)
+            self.basis = np.empty(
+                (self.Nbasis, self.Nnodes), dtype=self.functions.dtype
+            )
 
             self.basis[0] = self.inner.normalize(self.functions[0])
 
@@ -176,12 +177,9 @@ class _ReducedBasis:
         """Mismatch of a function h with its projection onto the basis"""
         norms = self.inner.norm(h).real
         dim = len(basis[:, 0])
-        return (
-            1.0
-            - (np.sum(abs(self._alpha(basis[ii], h)) ** 2 for ii in
-               range(dim)).real)
-            / norms
-        )
+        return (1.0 - (np.sum(abs(self._alpha(basis[ii], h)) ** 2
+                for ii in range(dim)).real)/norms
+                )
 
     def proj_errors_from_alpha(self, alpha, norms=None):
         """Square of the projection error of a function h on basis in terms
@@ -351,8 +349,8 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
         # Allocate memory for greedy algorithm arrays
         dtype = type(np.asarray(training_space).flatten()[0])
-        self.allocate(self._Nbasis, Npoints, Nsamples, Nmodes=Nmodes,
-                      dtype=dtype)
+        self.allocate(self._Nbasis, Npoints, Nsamples,
+                      Nmodes=Nmodes, dtype=dtype)
 
         # Seed
         if Nbasis > 0:
@@ -403,14 +401,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
             self.alpha[step + 1] = self.alpha_arr(self.basis[step + 1],
                                                   training_space)
 
-    def make(
-        self,
-        training_space,
-        index_seed,
-        tol,
-        rel=False,
-        verbose=False
-    ):
+    def make(self, training_space, index_seed, tol, rel=False, verbose=False):
         """Make a reduced basis using the standard greedy algorithm.
 
         Input
@@ -472,8 +463,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
                 # Single iteration and update errors, indices, basis, alpha
                 # arrays
                 if self._loss == "L2":
-                    errs = self.loss(self.alpha[: nn + 1],
-                                     norms=self._norms)
+                    errs = self.loss(self.alpha[: nn + 1], norms=self._norms)
                 elif self._loss == "Linfty":
                     errs = self.loss(
                         self.alpha[: nn + 1],
