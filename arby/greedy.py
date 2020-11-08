@@ -144,7 +144,8 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
 
     def build_rb(self, training_space, index_seed, tol, verbose=False):
         """Make a reduced basis using the standard greedy algorithm.
-        """        
+        """
+
         self.loss = self.proj_errors_from_alpha
 
         self.seed(training_space, index_seed)
@@ -158,7 +159,7 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
             nn += 1
             errs = self.loss(self.alpha[: nn], norms=self._norms)
             next_index = np.argmax(errs)
-            
+
             if next_index in self.indices:
                 print(">>> Warning(Index already selected): Exiting greedy "
                       "algorithm.")
@@ -170,7 +171,7 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
                     training_space[self.indices[nn]], self.basis[:nn]
                 )
                 self.alpha[nn] = self.alpha_arr(self.basis[nn],
-                                                      training_space)
+                                                training_space)
             sigma = errs[next_index]
             if verbose:
                 print(nn, "\t", sigma)
@@ -178,7 +179,6 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         self.size = nn
         self.trim(self.size)
 
-        
     def seed(self, training_space, seed):
         """Seed the greedy algorithm.
         """
