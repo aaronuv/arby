@@ -194,15 +194,165 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         assert type(loss) is str, "Expecting string for variable`loss`."
         self.loss = self.proj_errors_from_alpha
 
+    def seed(self, training_space, seed):
+        """Seed the greedy algorithm.
+
+        Seeds the first entries in the errors, indices, basis, and alpha
+        arrays for use with the standard greedy algorithm for producing a
+        reduced basis representation.
+
+        Input
+        -----
+        Nbasis         -- number of requested basis vectors to make
+        training_space -- the training space of functions
+        seed           -- array index for seed point in training set
+
+        Examples
+        --------
+
+        If rb is an instance of StandardRB, 0 is the array index associated
+        with the seed, and T is the training set then do::
+
+        >>> rb.seed(0, T)
+
+        """
+
+        # Extract dimensions of training space data
+        try:
+            Npoints, Nsamples = np.shape(np.asarray(training_space))
+        except(ValueError):
+            print("Unexpected dimensions for training space.")
+
+        # Validate inputs
+        assert Nsamples == np.size(
+            self.inner.weights
+        ), "Number of samples is inconsistent with quadrature rule."
+
+        # Allocate memory for greedy algorithm arrays
+        dtype = type(np.asarray(training_space).flatten()[0])
+        self.allocate(Npoints, Nsamples, dtype=dtype)
+
+        # Compute norms of training space data
+        self._norms = np.array([self.inner.norm(tt) for tt in training_space])
+
+        # Seed
+        self.errors[0] = np.max(self._norms) ** 2
+        self.indices[0] = seed
+        self.basis[0] = training_space[seed] / self._norms[seed]
+        self.basisnorms[0] = self._norms[seed]
+        self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
+
+    def iter(self, step, errs, training_space):
+        """One iteration of standard reduced basis greedy algorithm.
+
+        Updates the next entries of the errors, indices, basis, and
+        alpha arrays.
+
+        Input
+        -----
+        step           -- current iteration step
+        errs           -- projection errors across the training space
+        training_space -- the training space of functions
+
+        Examples
+        --------
+
+        If rb is an instance of StandardRB and iter=13 is the 13th
+        iteration of the greedy algorithm then the following code
+        snippet generates the next (i.e., 14th) entry of the errors,
+        indices, basis, and alpha arrays::
+
+        >>> rb.iter(13)
+
+        """
+
+        next_index = np.argmax(errs)
+        if next_index in self.indices:
+            print(">>> Warning(Index already selected): Exiting greedy "
+                  "algorithm.")
+            return 1
+        else:
+            self.indices[step + 1] = np.argmax(errs)
+            self.errors[step + 1] = np.max(errs)
+            self.basis[step + 1], self.basisnorms[step + 1] = self.add_basis(
+                training_space[self.indices[step + 1]], self.basis[: step + 1]
+            )
+            self.alpha[step + 1] = self.alpha_arr(self.basis[step + 1],
+                                                  training_space)
+
+    def make(self, training_space, index_seed, tol, verbose=False):
+        """Make a reduced basis using the standard greedy algorithm.
+
+        Input
+        -----
+        training_space -- the training space of functions
+        index_seed     -- array index for seed point in training set
+        tol            -- tolerance that terminates the greedy algorithm
+        verbose        -- print projection errors to screen
+                          (default is False)
+
+        Examples
+        --------
+        If rb is the StandardRB class instance, 0 the seed index, and
+        T the training set then do::
+
+        >>> rb.make(T, 0, 1e-12)
+
+        To prevent displaying any print to screen, set the `verbose`
+        keyword argument to `False`::
+
+        >>> rb.make(T, 0, 1e-12, verbose=False)
+
+        """
+        training_num = len(training_space)
+        # Seed the greedy algorithm
+        self.seed(training_space, index_seed)
+
+        # The standard greedy algorithm with fixed training set
+        if verbose:
+            print("\nStep", "\t", "Error")
+
+        nn, flag = 0, 0
+        while nn < training_num:
+            if verbose:
+                print(nn + 1, "\t", self.errors[nn])
+
+            # Check if tolerance is met
+            if self.errors[nn] <= tol:
+                if nn == 0:
+                    nn += 1
+                break
+            # or if the number of basis vectors has been reached
+            elif nn == training_num - 1:
+                nn += 1
+                break
+            # otherwise, add another point and basis vector
+            else:
+                # Single iteration and update errors, indices, basis, alpha
+                # arrays
+                errs = self.loss(self.alpha[: nn + 1], norms=self._norms)
+                flag = self.iter(nn, errs, training_space)
+
+            # If previously selected index is selected again then exit
+            if flag == 1:
+                nn += 1
+                break
+            # otherwise, increment the counter
+            nn += 1
+
+        # Trim excess allocated entries
+        self.size = nn
+        self.trim(self.size)
+
 # --- Aux functions ----------------------------------------------------------
 
-    def allocate(self, Nbasis, Npoints, Nquads, dtype="complex"):
+    def allocate(self, Npoints, Nquads, dtype="complex"):
         """Allocate memory for numpy arrays used for making reduced basis"""
-        self.errors = np.empty(Nbasis, dtype="double")
-        self.indices = np.empty(Nbasis, dtype="int")
-        self.basis = np.empty((Nbasis, Nquads), dtype=dtype)
-        self.basisnorms = np.empty(Nbasis, dtype="double")
-        self.alpha = np.empty((Nbasis, Npoints), dtype=dtype)
+        self.errors = np.empty(Npoints, dtype="double")
+        self.indices = np.empty(Npoints, dtype="int")
+        self.basis = np.empty((Npoints, Nquads), dtype=dtype)
+        self.basisnorms = np.empty(Npoints, dtype="double")
+        self.alpha = np.empty((Npoints, Npoints), dtype=dtype)
 
     def alpha_arr(self, e, hs):
         """Inner products of a basis function e with an array of functions
@@ -252,178 +402,6 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
 
     def Alpha_arr(self, E, e, alpha):
         return np.array([self._Alpha(EE, e, alpha) for EE in E])
-
-# ----------------------------------------------------------------------------
-
-    def seed(self, Nbasis, training_space, seed):
-        """Seed the greedy algorithm.
-
-        Seeds the first entries in the errors, indices, basis, and alpha
-        arrays for use with the standard greedy algorithm for producing a
-        reduced basis representation.
-
-        Input
-        -----
-        Nbasis         -- number of requested basis vectors to make
-        training_space -- the training space of functions
-        seed           -- array index for seed point in training set
-
-        Examples
-        --------
-
-        If rb is an instance of StandardRB, 0 is the array index associated
-        with the seed, and T is the training set then do::
-
-        >>> rb.seed(0, T)
-
-        """
-
-        # Extract dimensions of training space data
-        try:
-            Npoints, Nsamples = np.shape(np.asarray(training_space))
-        except(ValueError):
-            print("Unexpected dimensions for training space.")
-
-        # Compute norms of training space data
-        self._norms = np.array([self.inner.norm(tt) for tt in training_space])
-        # Validate inputs
-        assert Nsamples == np.size(
-            self.inner.weights
-        ), "Number of samples is inconsistent with quadrature rule."
-        self._Nbasis = Nbasis
-        assert (
-            self._Nbasis <= Npoints
-        ), "Number of requested basis elements is larger than size of "
-        "training set."
-
-        # Allocate memory for greedy algorithm arrays
-        dtype = type(np.asarray(training_space).flatten()[0])
-        self.allocate(self._Nbasis, Npoints, Nsamples, dtype=dtype)
-
-        # Seed
-        if Nbasis > 0:
-            self.errors[0] = np.max(self._norms) ** 2
-            self.indices[0] = seed
-            self.basis[0] = training_space[seed] / self._norms[seed]
-            self.basisnorms[0] = self._norms[seed]
-            self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
-
-    def iter(self, step, errs, training_space):
-        """One iteration of standard reduced basis greedy algorithm.
-
-        Updates the next entries of the errors, indices, basis, and
-        alpha arrays.
-
-        Input
-        -----
-        step           -- current iteration step
-        errs           -- projection errors across the training space
-        training_space -- the training space of functions
-
-        Examples
-        --------
-
-        If rb is an instance of StandardRB and iter=13 is the 13th
-        iteration of the greedy algorithm then the following code
-        snippet generates the next (i.e., 14th) entry of the errors,
-        indices, basis, and alpha arrays::
-
-        >>> rb.iter(13)
-
-        """
-
-        next_index = np.argmax(errs)
-        if next_index in self.indices:
-            print(">>> Warning(Index already selected): Exiting greedy "
-                  "algorithm.")
-            return 1
-        else:
-            self.indices[step + 1] = np.argmax(errs)
-            self.errors[step + 1] = np.max(errs)
-            self.basis[step + 1], self.basisnorms[step + 1] = self.add_basis(
-                training_space[self.indices[step + 1]], self.basis[: step + 1]
-            )
-            self.alpha[step + 1] = self.alpha_arr(self.basis[step + 1],
-                                                  training_space)
-
-    def make(self, training_space, index_seed, tol, rel=False, verbose=False):
-        """Make a reduced basis using the standard greedy algorithm.
-
-        Input
-        -----
-        training_space -- the training space of functions
-        index_seed     -- array index for seed point in training set
-        tol            -- tolerance that terminates the greedy algorithm
-        rel            -- precomputed array of training set function norms
-                          (default is None)
-        verbose        -- print projection errors to screen
-                          (default is False)
-
-        Examples
-        --------
-        If rb is the StandardRB class instance, 0 the seed index, and
-        T the training set then do::
-
-        >>> rb.make(T, 0, 1e-12)
-
-        To prevent displaying any print to screen, set the `verbose`
-        keyword argument to `False`::
-
-        >>> rb.make(T, 0, 1e-12, verbose=False)
-
-        """
-
-        self._Nbasis = len(training_space)
-
-        # Seed the greedy algorithm
-        self.seed(self._Nbasis, training_space, index_seed)
-
-        # The standard greedy algorithm with fixed training set
-        if verbose and self._Nbasis > 0:
-            print("\nStep", "\t", "Error")
-
-        if rel:
-            # tol *= np.max(self._norms)**2
-            tol *= self.errors[0]
-
-        nn, flag = 0, 0
-        while nn < self._Nbasis:
-            if verbose:
-                if rel:
-                    print(nn + 1, "\t", self.errors[nn] / self.errors[0])
-                else:
-                    print(nn + 1, "\t", self.errors[nn])
-
-            # Check if tolerance is met
-            if self.errors[nn] <= tol:
-                if nn == 0:
-                    nn += 1
-                break
-            # or if the number of basis vectors has been reached
-            elif nn == self._Nbasis - 1:
-                nn += 1
-                break
-            # otherwise, add another point and basis vector
-            else:
-                # Single iteration and update errors, indices, basis, alpha
-                # arrays
-                errs = self.loss(self.alpha[: nn + 1], norms=self._norms)
-                flag = self.iter(nn, errs, training_space)
-
-            # If previously selected index is selected again then exit
-            if flag == 1:
-                nn += 1
-                break
-            # otherwise, increment the counter
-            nn += 1
-
-        # Trim excess allocated entries
-        self.size = nn
-        self.trim(self.size)
-
-    def project(self, f):
-        """Project an array onto the reduced basis"""
-        return self.projection_from_basis(f, self.basis)
 
     def trim(self, num):
         """Trim arrays to have size num"""
