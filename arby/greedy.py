@@ -9,9 +9,8 @@ Classes for building reduced basis greedy algorithms
 
 __author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
 
-import numpy as np
 
-# sfs fsd 
+import numpy as np
 
 
 #############################################
@@ -409,7 +408,6 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
         training_space,
         index_seed,
         tol,
-        num=None,
         rel=False,
         verbose=False
     ):
@@ -439,13 +437,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
         """
 
-        if num is None:
-            self._Nbasis = len(training_space)
-        else:
-            assert type(num) is int, "Expecting integer."
-            assert num >= 0, "Requested number of basis vectors must be "
-            "non negative."
-            self._Nbasis = num
+        self._Nbasis = len(training_space)
 
         # Seed the greedy algorithm
         self.seed(self._Nbasis, training_space, index_seed)
