@@ -173,14 +173,6 @@ class _ReducedBasis:
         """Square of the projection error of functions hs on basis"""
         return [self.proj_error_from_basis(basis, hh) for hh in hs]
 
-    def proj_mismatch_from_basis(self, basis, h):
-        """Mismatch of a function h with its projection onto the basis"""
-        norms = self.inner.norm(h).real
-        dim = len(basis[:, 0])
-        return (1.0 - (np.sum(abs(self._alpha(basis[ii], h)) ** 2
-                for ii in range(dim)).real)/norms
-                )
-
     def proj_errors_from_alpha(self, alpha, norms=None):
         """Square of the projection error of a function h on basis in terms
         of pre-computed alpha matrix"""
@@ -282,23 +274,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
             assert type(loss) is str, "Expecting string for "
             "variable`loss`."
-            self._loss = loss
-            if loss == "L2":
-                self.loss = self.proj_errors_from_alpha
-            if loss == "Linfty":
-
-                def Linfty(alpha, basis, training):
-                    num = len(training)
-                    projs = np.dot(alpha.T, basis)
-
-                    return np.array(
-                        [
-                            self.inner.Linfty(training[ii] - projs[ii])
-                            for ii in range(num)
-                        ]
-                    )
-
-                self.loss = Linfty
+            self.loss = self.proj_errors_from_alpha
         else:
             print("No integration rule given.")
 
@@ -354,10 +330,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
 
         # Seed
         if Nbasis > 0:
-            if self._loss == "L2":
-                self.errors[0] = np.max(self._norms) ** 2
-            elif self._loss == "Linfty":
-                self.errors[0] = self.inner.Linfty(training_space[seed])
+            self.errors[0] = np.max(self._norms) ** 2
             self.indices[0] = seed
             self.basis[0] = training_space[seed] / self._norms[seed]
             self.basisnorms[0] = self._norms[seed]
@@ -462,14 +435,7 @@ class ReducedBasis(_ReducedBasis, _IteratedModifiedGramSchmidt):
             else:
                 # Single iteration and update errors, indices, basis, alpha
                 # arrays
-                if self._loss == "L2":
-                    errs = self.loss(self.alpha[: nn + 1], norms=self._norms)
-                elif self._loss == "Linfty":
-                    errs = self.loss(
-                        self.alpha[: nn + 1],
-                        self.basis[: nn + 1],
-                        training_space,
-                    )
+                errs = self.loss(self.alpha[: nn + 1], norms=self._norms)
                 flag = self.iter(nn, errs, training_space)
 
             # If previously selected index is selected again then exit
