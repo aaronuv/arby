@@ -20,12 +20,12 @@ setup(
     # description="Short description",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="Aaron Villanueva",
-    # author_email="your email",
-    # url="https://gitlab.com/aaronuv/rbpy",
+    author="Aarón Villanueva",
+    author_email="aaron.villanueva@unc.edu.ar",
+    url="https://gitlab.com/aaronuv/arby",
     packages=[
         "arby",
     ],
-    install_requires=["numpy>=1.6", "scipy>=0.16", "h5py>=2.10.0"],
+    install_requires=["numpy>=1.6", "scipy>=0.16"],
     test_suite="tests",
 )
