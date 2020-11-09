@@ -43,8 +43,8 @@ class _IteratedModifiedGramSchmidt:
                 norm = new_norm
                 ctr += 1
                 if ctr > max_iter:
-                    print(">>> Warning(Max number of iterations reached).")
-                    flag = 1
+                    raise Exception("Gram-Schmidt: max number of "
+                                    "iterations reached.")
             else:
                 flag = 1
 
@@ -161,9 +161,10 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
             next_index = np.argmax(errs)
 
             if next_index in self.indices:
-                print(">>> Warning(Index already selected): Exiting greedy "
+                self.size = nn -1
+                self.trim(self.size)
+                raise Exception("Index already selected: Exiting greedy "
                       "algorithm.")
-                break
             else:
                 self.indices[nn] = next_index
                 self.errors[nn - 1] = errs[next_index]
