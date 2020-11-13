@@ -44,7 +44,7 @@ class _IteratedModifiedGramSchmidt:
                 ctr += 1
                 if ctr > max_iter:
                     raise Exception(
-                        "Gram-Schmidt: max number of " "iterations reached."
+                        "Gram-Schmidt: max number of iterations reached."
                     )
             else:
                 flag = 1
