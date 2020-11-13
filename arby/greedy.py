@@ -43,8 +43,9 @@ class _IteratedModifiedGramSchmidt:
                 norm = new_norm
                 ctr += 1
                 if ctr > max_iter:
-                    raise Exception("Gram-Schmidt: max number of "
-                                    "iterations reached.")
+                    raise Exception(
+                        "Gram-Schmidt: max number of iterations reached."
+                    )
             else:
                 flag = 1
 
@@ -59,8 +60,9 @@ class _IteratedModifiedGramSchmidt:
         basis[0] = self.inner.normalize(hs[0])
 
         for ii in range(1, dim[0]):
-            basis[ii], _ = self.add_basis(hs[ii], basis[:ii],
-                                          a=a, max_iter=max_iter)
+            basis[ii], _ = self.add_basis(
+                hs[ii], basis[:ii], a=a, max_iter=max_iter
+            )
 
         return np.array(basis)
 
@@ -71,15 +73,13 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 
     Input
     -----
-    vectors    -- set of vectors to orthonormalize
-    inner      -- instance of Integration class
-    normsQ     -- norms of input vectors (default is False)
+    vectors: set of vectors to orthonormalize
+    integration: instance of Integration class that defines the inner product
 
     Methods
     -------
-    iter -- one iteration of the iterated, modified
-            Gram-Schmidt algorithm
-    make -- orthonormalize all the input vectors
+    iter: one iteration of the iterated, modified Gram-Schmidt algorithm.
+    build_basis: orthonormalize all the input vectors
 
     Examples
     --------
@@ -90,7 +90,7 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 
     Build an orthonormal basis by running
 
-    >>> basis.make()
+    >>> basis.build_basis()
 
     Output is an array of orthonormal basis elements.
     """
@@ -98,53 +98,48 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
     def __init__(self, vectors, integration):
         self.Nbasis, self.Nnodes = np.shape(vectors)
         self.functions = np.asarray(vectors)
+        self.basis = None
 
         _IteratedModifiedGramSchmidt.__init__(self, integration)
-
-    def iter(self, step, h, a=0.5, max_iter=3):
-        """One iteration of the iterated, modified Gram-Schmidt algorithm"""
-        ans = self.add_basis(h, self.basis[:step], a=a, max_iter=max_iter)
-        self.basis[step], _ = ans
 
     def build_basis(self, a=0.5, max_iter=3):
         """Find the corresponding orthonormal set of basis functions."""
 
         _, svds, _ = np.linalg.svd(self.functions)
 
-        if min(svds) < 5e-15:
+        linear_indep_tol = 5e-15
+        if min(svds) < linear_indep_tol:
             raise Exception("Functions are not linearly independent.")
 
-        else:
-            self.basis = np.empty(
-                (self.Nbasis, self.Nnodes), dtype=self.functions.dtype
+        ortho_basis = []
+        # First element of the basis is special, it's just normalized
+        ortho_basis.append(self.inner.normalize(self.functions[0]))
+        # For the rest of basis elements add them one by one by extending basis
+        for new_basis_elem in self.functions[1:]:
+            projected_element, _ = self.add_basis(
+                new_basis_elem, ortho_basis, a=a, max_iter=max_iter
             )
-
-            self.basis[0] = self.inner.normalize(self.functions[0])
-
-            for ii in range(1, self.Nbasis):
-                self.iter(ii, self.functions[ii], a=a, max_iter=max_iter)
-
-            return np.array(self.basis)
+            ortho_basis.append(projected_element)
+        self.basis = np.array(ortho_basis)
 
 
 #############################################
 # Class for reduced basis greedy algorithms #
 #############################################
 
+
 class ReducedBasis(_IteratedModifiedGramSchmidt):
-    """Class for standard reduced basis greedy algorithm.
-    """
+    """Class for standard reduced basis greedy algorithm."""
+
     def __init__(self, interval, num, rule="riemann"):
 
-        comp_integration = Integration(interval=interval, num=num,
-                                       rule=rule)
+        comp_integration = Integration(interval=interval, num=num, rule=rule)
         self.inner = comp_integration
 
         _IteratedModifiedGramSchmidt.__init__(self, comp_integration)
 
     def build_rb(self, training_space, index_seed, tol, verbose=False):
-        """Make a reduced basis using the standard greedy algorithm.
-        """
+        """Make a reduced basis using the standard greedy algorithm."""
 
         self.loss = self.proj_errors_from_alpha
 
@@ -154,25 +149,25 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
             print("\nStep", "\t", "Error")
 
         nn = 0
-        sigma = 1.
+        sigma = 1.0
         while sigma > tol:
             nn += 1
-            errs = self.loss(self.alpha[: nn], norms=self._norms)
+            errs = self.loss(self.alpha[:nn], norms=self._norms)
             next_index = np.argmax(errs)
 
             if next_index in self.indices:
-                self.size = nn -1
+                self.size = nn - 1
                 self.trim(self.size)
-                raise Exception("Index already selected: Exiting greedy "
-                      "algorithm.")
+                raise Exception(
+                    "Index already selected: Exiting greedy " "algorithm."
+                )
             else:
                 self.indices[nn] = next_index
                 self.errors[nn - 1] = errs[next_index]
                 self.basis[nn], self.basisnorms[nn] = self.add_basis(
                     training_space[self.indices[nn]], self.basis[:nn]
                 )
-                self.alpha[nn] = self.alpha_arr(self.basis[nn],
-                                                training_space)
+                self.alpha[nn] = self.alpha_arr(self.basis[nn], training_space)
             sigma = errs[next_index]
             if verbose:
                 print(nn, "\t", sigma)
@@ -181,13 +176,12 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         self.trim(self.size)
 
     def seed(self, training_space, seed):
-        """Seed the greedy algorithm.
-        """
+        """Seed the greedy algorithm."""
 
         # Extract dimensions of training space data
         try:
             Npoints, Nsamples = np.shape(np.asarray(training_space))
-        except(ValueError):
+        except (ValueError):
             print("Unexpected dimensions for training space.")
 
         # Validate inputs
@@ -208,7 +202,7 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         self.basisnorms[0] = self._norms[seed]
         self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
 
-# --- Aux functions ----------------------------------------------------------
+    # --- Aux functions ------------------------------------------------------
 
     def allocate(self, Npoints, Nquads, dtype="complex"):
         """Allocate memory for numpy arrays used for making reduced basis"""
