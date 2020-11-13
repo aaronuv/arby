@@ -7,6 +7,7 @@ class TestArby(unittest.TestCase):
     def test_basis_shape(self):
         "Test correct shape for reduced basis"
         from scipy.special import jv as BesselJ
+
         npoints = 101
         # Sample parameter nu and physical variable x
         nu = np.linspace(0, 10, num=npoints)
@@ -28,8 +29,9 @@ class TestArby(unittest.TestCase):
         GS_basis = arby.GramSchmidt(expected_basis, integration)
         GS_basis.build_basis()
         computed_basis = GS_basis.basis
-        self.assertTrue(np.allclose(computed_basis, expected_basis,
-                                    rtol=1e-5, atol=1e-8))
+        self.assertTrue(
+            np.allclose(computed_basis, expected_basis, rtol=1e-5, atol=1e-8)
+        )
 
 
 class TestIntegrals(unittest.TestCase):
@@ -38,9 +40,7 @@ class TestIntegrals(unittest.TestCase):
         with self.assertRaises(TypeError):
             rule_test = 1.0
             npoints = 101
-            arby.integrals.Integration(
-                [0, 1], num=npoints, rule=rule_test
-            )
+            arby.integrals.Integration([0, 1], num=npoints, rule=rule_test)
         with self.assertRaises(ValueError):
             arby.integrals.Integration([0, 1], rule="riemann")
         with self.assertRaises(ValueError):
