@@ -1,4 +1,4 @@
-# --- greedy.py ---
+# - greedy.py -
 
 # Copyright (c) 2020, Aarón Villanueva
 # License: MIT
@@ -6,9 +6,6 @@
 """
 Classes for building reduced basis greedy algorithms
 """
-
-__author__ = "Chad Galley <crgalley@tapir.caltech.edu, crgalley@gmail.com>"
-
 
 import numpy as np
 from .integrals import Integration
@@ -19,55 +16,36 @@ from .integrals import Integration
 #############################################
 
 
-class _IteratedModifiedGramSchmidt:
-    """Iterated modified Gram-Schmidt algorithm for building an orthonormal
-    basis. Algorithm from Hoffman, `Iterative Algorithms for Gram-Schmidt
-    Orthogonalization`.
+def GS_add_element(h, basis, integration, a, max_iter):
     """
+    Iterated modified Gram-Schmidt algorithm for building an orthonormal
+    basis. Algorithm from Hoffman, `Iterative Algorithms for Gram-Schmidt
+    Orthogonalization`. Given a function, h, find the corresponding basis
+    function orthonormal to all previous ones.
+    """
+    norm = integration.norm(h)
+    e = h / norm
 
-    def __init__(self, inner):
-        self.inner = inner
+    flag, ctr = 0, 1
+    while flag == 0:
+        for b in basis:
+            e -= b * integration.dot(b, e)
+        new_norm = integration.norm(e)
+        if new_norm / norm <= a:
+            norm = new_norm
+            ctr += 1
+            if ctr > max_iter:
+                raise Exception(
+                    "Gram-Schmidt: max number of iterations reached."
+                )
+        else:
+            flag = 1
 
-    def add_basis(self, h, basis, a=0.5, max_iter=3):
-        """Given a function, h, find the corresponding basis function
-        orthonormal to all previous ones"""
-        norm = self.inner.norm(h)
-        e = h / norm
-
-        flag, ctr = 0, 1
-        while flag == 0:
-            for b in basis:
-                e -= b * self.inner.dot(b, e)
-            new_norm = self.inner.norm(e)
-            if new_norm / norm <= a:
-                norm = new_norm
-                ctr += 1
-                if ctr > max_iter:
-                    raise Exception(
-                        "Gram-Schmidt: max number of iterations reached."
-                    )
-            else:
-                flag = 1
-
-        return [e / new_norm, new_norm]
-
-    def make_basis(self, hs, a=0.5, max_iter=3):
-        """Given a set of functions, hs, find the corresponding orthonormal
-        set of basis functions."""
-
-        dim = np.shape(hs)
-        basis = np.empty_like(hs)
-        basis[0] = self.inner.normalize(hs[0])
-
-        for ii in range(1, dim[0]):
-            basis[ii], _ = self.add_basis(
-                hs[ii], basis[:ii], a=a, max_iter=max_iter
-            )
-
-        return np.array(basis)
+    return [e / new_norm, new_norm]
 
 
-class GramSchmidt(_IteratedModifiedGramSchmidt):
+
+def GramSchmidt(vectors, integration, a=0.5, max_iter=3):
     """Class for building an orthonormal basis using the
     iterated, modified Gram-Schmidt procedure.
 
@@ -76,51 +54,29 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
     vectors: set of vectors to orthonormalize
     integration: instance of Integration class that defines the inner product
 
-    Methods
-    -------
-    iter: one iteration of the iterated, modified Gram-Schmidt algorithm.
-    build_basis: orthonormalize all the input vectors
-
-    Examples
-    --------
-    Create an instance of the Basis class for functions with
-    unit norm::
-
-    >>> basis = rp.algorithms.Basis(vectors, inner)
-
-    Build an orthonormal basis by running
-
-    >>> basis.build_basis()
-
     Output is an array of orthonormal basis elements.
     """
+    
+    Nbasis, Nnodes = np.shape(vectors)
+    functions = np.asarray(vectors)
 
-    def __init__(self, vectors, integration):
-        self.Nbasis, self.Nnodes = np.shape(vectors)
-        self.functions = np.asarray(vectors)
-        self.basis = None
+    _, svds, _ = np.linalg.svd(functions)
 
-        _IteratedModifiedGramSchmidt.__init__(self, integration)
+    linear_indep_tol = 5e-15
+    if min(svds) < linear_indep_tol:
+        raise Exception("Functions are not linearly independent.")
 
-    def build_basis(self, a=0.5, max_iter=3):
-        """Find the corresponding orthonormal set of basis functions."""
+    ortho_basis = []
+    # First element of the basis is special, it's just normalized
+    ortho_basis.append(integration.normalize(functions[0]))
+    # For the rest of basis elements add them one by one by extending basis
+    for new_basis_elem in functions[1:]:
+        projected_element, _ = GS_add_element(new_basis_elem, ortho_basis,
+                                              integration, a, max_iter)
+        ortho_basis.append(projected_element)
+    basis = np.array(ortho_basis)
 
-        _, svds, _ = np.linalg.svd(self.functions)
-
-        linear_indep_tol = 5e-15
-        if min(svds) < linear_indep_tol:
-            raise Exception("Functions are not linearly independent.")
-
-        ortho_basis = []
-        # First element of the basis is special, it's just normalized
-        ortho_basis.append(self.inner.normalize(self.functions[0]))
-        # For the rest of basis elements add them one by one by extending basis
-        for new_basis_elem in self.functions[1:]:
-            projected_element, _ = self.add_basis(
-                new_basis_elem, ortho_basis, a=a, max_iter=max_iter
-            )
-            ortho_basis.append(projected_element)
-        self.basis = np.array(ortho_basis)
+    return basis
 
 
 #############################################
@@ -128,23 +84,45 @@ class GramSchmidt(_IteratedModifiedGramSchmidt):
 #############################################
 
 
-class ReducedBasis(_IteratedModifiedGramSchmidt):
+class ReducedBasis:
     """Class for standard reduced basis greedy algorithm."""
 
-    def __init__(self, interval, num, rule="riemann"):
-
-        comp_integration = Integration(interval=interval, num=num, rule=rule)
-        self.inner = comp_integration
-
-        _IteratedModifiedGramSchmidt.__init__(self, comp_integration)
-
-    def build_rb(self, training_space, index_seed, tol, verbose=False):
-        """Make a reduced basis using the standard greedy algorithm."""
-
+    def __init__(self, training_space, interval, rule="riemann"):
+        self.training = np.array(training_space)
+        self.Ntrain, self.Nsamples = training_space.shape
         self.loss = self.proj_errors_from_alpha
+        self.integration = Integration(interval=interval, num=self.Nsamples, rule=rule)
 
-        self.seed(training_space, index_seed)
+    def build_rb(self, index_seed=0, tol=1e-12, verbose=False):
+        """Make a reduced basis using the standard greedy algorithm."""
+        # In seed gives a null function, iterate to a new seed
+        seed_function = self.training[index_seed]
+        zero_function = np.zeros_like(seed_function)
+        while np.allclose(seed_function, zero_function):
+            index_seed = np.randint(1, Ntrain)
+            seed_function = self.training[index_seed]
 
+        # ====== Seed the greedy algorithm and allocate memory ================
+        # Validate inputs
+        assert self.Nsamples == np.size(
+            self.integration.weights
+        ), "Number of samples is inconsistent with quadrature rule."
+
+        # Allocate memory for greedy algorithm arrays
+        dtype = type(np.asarray(self.training).flatten()[0])
+        self.allocate(self.Ntrain, self.Nsamples, dtype=dtype)
+
+        # Compute norms of training space data
+        self._norms = np.array([self.integration.norm(tt) for tt in self.training])
+
+        # Seed
+        self.indices[0] = index_seed
+        self.basis[0] = self.training[index_seed] / self._norms[index_seed]
+        self.basisnorms[0] = self._norms[index_seed]
+        self.alpha[0] = self.alpha_arr(self.basis[0], self.training)
+        # ====================================================================
+
+        # ===== Start greedy loops ===========================================
         if verbose:
             print("\nStep", "\t", "Error")
 
@@ -159,15 +137,16 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
                 self.size = nn - 1
                 self.trim(self.size)
                 raise Exception(
-                    "Index already selected: Exiting greedy " "algorithm."
+                    "Index already selected: Exiting greedy algorithm."
                 )
             else:
                 self.indices[nn] = next_index
                 self.errors[nn - 1] = errs[next_index]
-                self.basis[nn], self.basisnorms[nn] = self.add_basis(
-                    training_space[self.indices[nn]], self.basis[:nn]
+                self.basis[nn], self.basisnorms[nn] = GS_add_element(
+                    self.training[self.indices[nn]], self.basis[:nn],
+                    self.integration, a=0.5, max_iter=3
                 )
-                self.alpha[nn] = self.alpha_arr(self.basis[nn], training_space)
+                self.alpha[nn] = self.alpha_arr(self.basis[nn], self.training)
             sigma = errs[next_index]
             if verbose:
                 print(nn, "\t", sigma)
@@ -175,34 +154,8 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         self.size = nn
         self.trim(self.size)
 
-    def seed(self, training_space, seed):
-        """Seed the greedy algorithm."""
-
-        # Extract dimensions of training space data
-        try:
-            Npoints, Nsamples = np.shape(np.asarray(training_space))
-        except (ValueError):
-            print("Unexpected dimensions for training space.")
-
-        # Validate inputs
-        assert Nsamples == np.size(
-            self.inner.weights
-        ), "Number of samples is inconsistent with quadrature rule."
-
-        # Allocate memory for greedy algorithm arrays
-        dtype = type(np.asarray(training_space).flatten()[0])
-        self.allocate(Npoints, Nsamples, dtype=dtype)
-
-        # Compute norms of training space data
-        self._norms = np.array([self.inner.norm(tt) for tt in training_space])
-
-        # Seed
-        self.indices[0] = seed
-        self.basis[0] = training_space[seed] / self._norms[seed]
-        self.basisnorms[0] = self._norms[seed]
-        self.alpha[0] = self.alpha_arr(self.basis[0], training_space)
-
-    # --- Aux functions ------------------------------------------------------
+        
+    # ==== Auxiliary functions ===============================================
 
     def allocate(self, Npoints, Nquads, dtype="complex"):
         """Allocate memory for numpy arrays used for making reduced basis"""
@@ -215,15 +168,15 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
     def alpha_arr(self, e, hs):
         """Inner products of a basis function e with an array of functions
         hs"""
-        return np.array([self.inner.dot(e, hh) for hh in hs])
+        return np.array([self.integration.dot(e, hh) for hh in hs])
 
     def proj_error_from_basis(self, basis, h):
         """Square of the projection error of a function h on basis"""
-        norm = self.inner.norm(h).real
+        norm = self.integration.norm(h).real
         dim = len(basis[:, 0])
         ans = 0.0
         for ii in range(dim):
-            ans += np.abs(self.inner.dot(basis[ii], h)) ** 2
+            ans += np.abs(self.integration.dot(basis[ii], h)) ** 2
         return norm ** 2 - ans
 
     def proj_errors_from_basis(self, basis, hs):
@@ -244,7 +197,7 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         """Project a function h onto the basis functions"""
         ans = 0.0
         for ee in basis:
-            ans += ee * self.inner.dot(ee, h)
+            ans += ee * self.integration.dot(ee, h)
         return ans
 
     def projection_from_alpha(self, alpha, basis):
@@ -256,7 +209,7 @@ class ReducedBasis(_IteratedModifiedGramSchmidt):
         return ans
 
     def _Alpha(self, E, e, alpha):
-        return self.inner.dot(E, self.projection_from_alpha(alpha, e))
+        return self.integration.dot(E, self.projection_from_alpha(alpha, e))
 
     def Alpha_arr(self, E, e, alpha):
         return np.array([self._Alpha(EE, e, alpha) for EE in E])

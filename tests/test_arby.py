@@ -15,20 +15,18 @@ class TestArby(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu])
         # build reduced basis
-        rb = arby.greedy.ReducedBasis([0, 1], num=npoints, rule="riemann")
-        rb.build_rb(training, 0, 1e-14, verbose=False)
+        rb = arby.ReducedBasis(training, [0, 1], rule="riemann")
+        rb.build_rb(tol=1e-14)
 
         # Assert that basis has correct shape
         self.assertEqual(rb.basis.ndim, 2)
         self.assertEqual(rb.basis.shape[1], npoints)
 
-    def test_GS(self):
+    def test_GramSchmidt(self):
         expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
         nbasis, npoints = expected_basis.shape
         integration = arby.Integration([0, 1], num=npoints, rule="riemann")
-        GS_basis = arby.GramSchmidt(expected_basis, integration)
-        GS_basis.build_basis()
-        computed_basis = GS_basis.basis
+        computed_basis = arby.GramSchmidt(expected_basis, integration)
         self.assertTrue(
             np.allclose(computed_basis, expected_basis, rtol=1e-5, atol=1e-8)
         )
