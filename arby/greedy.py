@@ -9,6 +9,7 @@ Classes for building reduced basis greedy algorithms
 
 import numpy as np
 from .integrals import Integration
+from random import randint
 
 #############################################
 # Class for iterated, modified Gram-Schmidt #

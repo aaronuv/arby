@@ -20,7 +20,7 @@ setup(
     # description="Short description",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="Aaron Villanueva",
+    author="Aarón Villanueva",
     author_email="aaron.villanueva@unc.edu.ar",
     url="https://gitlab.com/aaronuv/arby",
     packages=[
