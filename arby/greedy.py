@@ -122,7 +122,7 @@ class ReducedBasis:
         self.indices[0] = index_seed
         self.basis[0] = self.training[index_seed] / self._norms[index_seed]
         self.basisnorms[0] = self._norms[index_seed]
-        self.alpha[0] = self.alpha_arr(self.basis[0], self.training)
+        self.alpha[0] = self.integration.dot(self.basis[0], self.training)
         # =====================================================================
 
         # ===== Start greedy loops ============================================
@@ -151,7 +151,8 @@ class ReducedBasis:
                     a=0.5,
                     max_iter=3,
                 )
-                self.alpha[nn] = self.alpha_arr(self.basis[nn], self.training)
+                self.alpha[nn] = self.integration.dot(self.basis[nn],
+                                                      self.training)
             sigma = errs[next_index]
             if verbose:
                 print(nn, "\t", sigma)
@@ -168,11 +169,6 @@ class ReducedBasis:
         self.basis = np.empty((Npoints, Nquads), dtype=dtype)
         self.basisnorms = np.empty(Npoints, dtype="double")
         self.alpha = np.empty((Npoints, Npoints), dtype=dtype)
-
-    def alpha_arr(self, e, hs):
-        """Inner products of a basis function e with an array of functions
-        hs"""
-        return np.array([self.integration.dot(e, hh) for hh in hs])
 
     def proj_error_from_basis(self, basis, h_vector):
         """Square of the projection error of a function h on basis"""

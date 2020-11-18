@@ -172,8 +172,8 @@ class Integration:
         return np.dot(self.weights, f)
 
     def dot(self, f, g):
-        """Dot product of two functions"""
-        return np.dot(self.weights, f.conjugate() * g)
+        """Dot product between a function f and an array of functions g"""
+        return np.dot(self.weights, (f.conjugate() * g).transpose())
 
     def norm(self, f):
         """Norm of function"""
