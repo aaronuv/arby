@@ -13,7 +13,7 @@ class TestBesselExample(unittest.TestCase):
         "training data"
         nbasis, npoints = self.basis.shape
         # build reduced basis
-        rb = arby.ReducedBasis(self.training,[0, 1], rule="riemann")
+        rb = arby.ReducedBasis(self.training, [0, 1], rule="riemann")
         rb.build_rb(tol=1e-14)
         # compare
         self.assertTrue(np.allclose(rb.basis, self.basis,
