@@ -92,7 +92,8 @@ class ReducedBasis:
         self.training = np.array(training_space)
         self.Ntrain, self.Nsamples = training_space.shape
         self.loss = self.proj_errors_from_alpha
-        self.integration = Integration(interval=interval, num=self.Nsamples, rule=rule)
+        self.integration = Integration(interval=interval, num=self.Nsamples,
+                                       rule=rule)
 
     def build_rb(self, index_seed=0, tol=1e-12, verbose=False):
         """Make a reduced basis using the standard greedy algorithm."""
@@ -114,16 +115,17 @@ class ReducedBasis:
         self.allocate(self.Ntrain, self.Nsamples, dtype=dtype)
 
         # Compute norms of training space data
-        self._norms = np.array([self.integration.norm(tt) for tt in self.training])
+        self._norms = np.array([self.integration.norm(tt) for tt
+                               in self.training])
 
         # Seed
         self.indices[0] = index_seed
         self.basis[0] = self.training[index_seed] / self._norms[index_seed]
         self.basisnorms[0] = self._norms[index_seed]
         self.alpha[0] = self.alpha_arr(self.basis[0], self.training)
-        # ====================================================================
+        # =====================================================================
 
-        # ===== Start greedy loops ===========================================
+        # ===== Start greedy loops ============================================
         if verbose:
             print("\nStep", "\t", "Error")
 
@@ -171,14 +173,13 @@ class ReducedBasis:
         hs"""
         return np.array([self.integration.dot(e, hh) for hh in hs])
 
-    def proj_error_from_basis(self, basis, h):
+    def proj_error_from_basis(self, basis, h_vector):
         """Square of the projection error of a function h on basis"""
-        norm = self.integration.norm(h).real
-        dim = len(basis[:, 0])
-        ans = 0.0
-        for ii in range(dim):
-            ans += np.abs(self.integration.dot(basis[ii], h)) ** 2
-        return norm ** 2 - ans
+        h_vector_sqnorm = self.integration.norm(h_vector).real ** 2
+        inner_prod = np.array([self.integration.dot(basis_elem, h_vector)**2
+                                                for basis_elem in basis])
+        return h_vector_sqnorm - np.linalg.norm(inner_prod)
+
 
     def proj_errors_from_basis(self, basis, hs):
         """Square of the projection error of functions hs on basis"""
