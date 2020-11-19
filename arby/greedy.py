@@ -137,18 +137,18 @@ class ReducedBasis:
                 self.trim(self.size)
                 raise Exception("Index already selected: exiting"
                                 "greedy algorithm.")
-            else:
-                self.indices[nn] = next_index
-                self.errors[nn-1] = errs[next_index]
-                self.basis[nn], self.basisnorms[nn] = GS_add_element(
-                    self.training[self.indices[nn]],
-                    self.basis[:nn],
-                    self.integration,
-                    a=0.5,
-                    max_iter=3,
+
+            self.indices[nn] = next_index
+            self.errors[nn-1] = errs[next_index]
+            self.basis[nn], self.basisnorms[nn] = GS_add_element(
+                self.training[self.indices[nn]],
+                self.basis[:nn],
+                self.integration,
+                a=0.5,
+                max_iter=3,
                 )
-                self.proj_matrix[nn] = self.integration.dot(self.basis[nn],
-                                                            self.training)
+            self.proj_matrix[nn] = self.integration.dot(self.basis[nn],
+                                                        self.training)
             sigma = errs[next_index]
             if verbose:
                 print(nn, "\t", sigma)
