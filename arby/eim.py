@@ -79,7 +79,7 @@ class EmpiricalMethods:
         k.append(norm * leb)
         lebesgue_norms.append(leb)
 
-        self.indices = nodes
+        self.eim_nodes = nodes
         self.lebesgue = lebesgue_norms
         self.k = k
         self.matrices = matrices

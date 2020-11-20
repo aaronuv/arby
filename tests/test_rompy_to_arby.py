@@ -26,7 +26,7 @@ class TestBesselExample(unittest.TestCase):
         eim_bessel = arby.EmpiricalMethods(self.basis)
         eim_bessel.eim()
         # compare
-        self.assertTrue((rompy_eim_nodes == eim_bessel.indices).all())
+        self.assertTrue((rompy_eim_nodes == eim_bessel.eim_nodes).all())
 
 
 if __name__ == "__main__":
