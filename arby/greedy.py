@@ -6,13 +6,15 @@
 
 import numpy as np
 from .integrals import Integration
+from .eim import EmpiricalMethods
 from random import randint  # noqa: F401
-
+from scipy.interpolate import splrep, splev
 
 # ==========================================
 # Class for Iterated-Modified Gram-Schmidt
 #      Orthonormalization Method
 # ==========================================
+
 
 def GS_add_element(h, basis, integration, a, max_iter):
     """
@@ -79,6 +81,7 @@ def GramSchmidt(vectors, integration, a=0.5, max_iter=3):
 # Class for Reduced Basis Method
 # ===============================
 
+
 class ReducedBasis:
     """Class for standard reduced basis greedy algorithm."""
 
@@ -87,8 +90,7 @@ class ReducedBasis:
         self.Ntrain, self.Nsamples = training_space.shape
         self.loss = self.projection_error
         self.integration = Integration(interval=interval,
-                                       num=self.Nsamples,
-                                       rule=rule)
+                                       num=self.Nsamples, rule=rule)
 
     def build_rb(self, index_seed=0, tol=1e-12, verbose=False):
         """Make a reduced basis using the standard greedy algorithm."""
@@ -114,7 +116,7 @@ class ReducedBasis:
                                for tt in self.training])
 
         # Seed
-        self.indices[0] = index_seed
+        self.indices = [index_seed]
         self.basis[0] = self.training[index_seed] / self._norms[index_seed]
         self.basisnorms[0] = self._norms[index_seed]
         self.proj_matrix[0] = self.integration.dot(self.basis[0],
@@ -135,18 +137,18 @@ class ReducedBasis:
             if next_index in self.indices:
                 self.size = nn - 1
                 self.trim(self.size)
-                raise Exception("Index already selected: exiting"
+                raise Exception("Index already selected: exiting "
                                 "greedy algorithm.")
 
-            self.indices[nn] = next_index
-            self.errors[nn-1] = errs[next_index]
+            self.indices.append(next_index)
+            self.errors[nn - 1] = errs[next_index]
             self.basis[nn], self.basisnorms[nn] = GS_add_element(
                 self.training[self.indices[nn]],
                 self.basis[:nn],
                 self.integration,
                 a=0.5,
                 max_iter=3,
-                )
+            )
             self.proj_matrix[nn] = self.integration.dot(self.basis[nn],
                                                         self.training)
             sigma = errs[next_index]
@@ -161,7 +163,6 @@ class ReducedBasis:
     def allocate(self, Npoints, Nquads, dtype="complex"):
         """Allocate memory for numpy arrays used for making reduced basis"""
         self.errors = np.empty(Npoints, dtype="double")
-        self.indices = np.empty(Npoints, dtype="int")
         self.basis = np.empty((Npoints, Nquads), dtype=dtype)
         self.basisnorms = np.empty(Npoints, dtype="double")
         self.proj_matrix = np.empty((Npoints, Npoints), dtype=dtype)
@@ -169,15 +170,14 @@ class ReducedBasis:
     def projection_error(self, proj_matrix, norms):
         """Square of the projection error of a function h on basis in terms
         of pre-computed projection matrix"""
-        proj_norms = np.array([np.linalg.norm(proj_matrix[:, i])
-                               for i in range(self.Ntrain)]
-                              )
-        return norms ** 2 - proj_norms**2
+        proj_norms = np.array(
+            [np.linalg.norm(proj_matrix[:, i]) for i in range(self.Ntrain)]
+        )
+        return norms ** 2 - proj_norms ** 2
 
     def trim(self, num):
         """Trim arrays to have size num"""
         self.errors = self.errors[:num]
-        self.indices = self.indices[:num]
         self.basis = self.basis[:num]
         self.proj_matrix = self.proj_matrix[:num]
 
@@ -192,7 +192,7 @@ class ReducedBasis:
             [self.integration.dot(basis_elem, h_vector)
              for basis_elem in basis]
         )
-        return h_vector_sqnorm**2 - np.linalg.norm(inner_prod)**2
+        return h_vector_sqnorm ** 2 - np.linalg.norm(inner_prod) ** 2
 
     def project_on_basis(self, h, basis):
         """Project a function h onto the basis functions"""
@@ -200,3 +200,65 @@ class ReducedBasis:
         for e in basis:
             projected_function += e * self.integration.dot(e, h)
         return projected_function
+
+    def interpolate(self, h):
+        """Interpolate a function h at EIM nodes."""
+        assert len(h) == self.Nsamples, (
+            "Size of vector h doesn't " "match grid size of basis elements."
+        )
+        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes])
+        h_interpolated = self.Interpolant @ h_at_nodes
+        return h_interpolated
+
+
+# ==== ROM class ==============================================================
+
+
+class ROM:
+    def __init__(
+        self,
+        training_space,
+        physical_interval,
+        parameter_interval,
+        reduced_basis=None,
+        rule="riemann",
+        index_seed=0,
+        tol=1e-12,
+        k=3,
+    ):
+        training_space = np.asarray(training_space)
+        Ntrain, Nsamples = training_space.shape
+        assert Ntrain == parameter_interval.size, (
+            "Number of training "
+            "functions must be equal to number of parameter points."
+        )
+        if reduced_basis is None:
+            phys_min = physical_interval.min()
+            phys_max = physical_interval.max()
+            rb = ReducedBasis(training_space, [phys_min, phys_max], rule=rule)
+            rb.build_rb(index_seed=index_seed, tol=tol)
+            self.reduced_basis = rb.basis
+        eim = EmpiricalMethods(self.reduced_basis)
+        eim.build_eim()
+        training_compressed = np.empty(
+            (Ntrain, self.reduced_basis.size), dtype=training_space.dtype
+        )
+        for i in range(Ntrain):
+            for j, node in enumerate(eim.eim_nodes):
+                training_compressed[i, j] = training_space[i, node]
+        h_in_nodes_splined = []
+        for i in range(rb.size):
+            h_in_nodes_splined.append(
+                splrep(parameter_interval, training_compressed[:, i], k=k)
+            )
+
+        self.Interpolant = eim.Interpolant
+        self.spline_model = h_in_nodes_splined
+
+    def surrogate(self, parameter):
+        h_surr_at_nodes = np.array(
+            [splev(parameter, spline) for spline in self.spline_model]
+        )
+        h_surrogate = self.Interpolant @ h_surr_at_nodes
+
+        return h_surrogate

@@ -46,12 +46,14 @@ class EmpiricalMethods:
                 print(new_node)
             nodes.append(new_node)
 
-        self.V_matrix = np.array(self.next_vandermonde(nodes, V_matrix))
+        V_matrix = np.array(self.next_vandermonde(nodes, V_matrix))
+        self.V_matrix = V_matrix.transpose()
         invV_matrix = np.linalg.inv(self.V_matrix)
         self.Interpolant = self.Basis.transpose() @ invV_matrix
         self.eim_nodes = nodes
 
     # ==== Auxiliary functions ================================================
+
     def next_vandermonde(self, nodes, vandermonde=None):
         """Build the next V-matrix from the previous one."""
         if vandermonde is None:
@@ -61,17 +63,10 @@ class EmpiricalMethods:
         n = len(vandermonde)
         new_node = nodes[-1]
         for i in range(n):
-            vandermonde[i].append(self.Basis[i][new_node])
+            vandermonde[i].append(self.Basis[i, new_node])
         vertical_vector = [self.Basis[n, nodes[j]] for j in range(n)]
         vertical_vector.append(self.Basis[n, new_node])
         vandermonde.append(vertical_vector)
         return vandermonde
 
     # ==== Validation functions ===============================================
-    def interpolate(self, h):
-        """Interpolate a function h at EIM nodes."""
-        assert len(h) == self.Nsamples, ("Size of vector h doesn't "
-                                        "match grid size of basis elements.")
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes])
-        h_interpolated = self.Interpolant @ h_at_nodes
-        return h_interpolated
