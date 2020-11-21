@@ -24,7 +24,7 @@ class TestBesselExample(unittest.TestCase):
         rompy_eim_nodes = np.array([0, 100, 2, 36, 9, 72, 1, 20, 89, 4])
         # Compute eim nodes for Bessel functions
         eim_bessel = arby.EmpiricalMethods(self.basis)
-        eim_bessel.eim()
+        eim_bessel.build_eim()
         # compare
         self.assertTrue((rompy_eim_nodes == eim_bessel.eim_nodes).all())
 

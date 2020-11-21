@@ -5,81 +5,64 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 import numpy as np
-import copy
 
-
-def two_norm(v):
-    return np.linalg.norm(v, 2)
-
+# =========================================
+# Class for Empirical Interpolation Method
+# =========================================
 
 class EmpiricalMethods:
-    """
-    A class to select empirical nodes from a basis.
-
+    """Build an Empirical Interpolant matrix operator.
     """
 
-    def __init__(self, B):
-        self.B = B
-        self.n = len(self.B)
-        self.L = len(self.B[0])
+    def __init__(self, Basis):
+        self.Basis = np.array(Basis)
+        self.Nbasis, self.Nsamples = self.Basis.shape
+        self.eim_nodes = None
+        self.Interpolant = None
 
-    #################################
-    # Construct the next Vandermonde matrix with eim nodes:
-    # V(T0,...,Tn-1,Tn)
+    # ==== Classic EIM ========================================================
 
-    def Vandermonde(self, van, nodes):
-        v = copy.deepcopy(van)
-        dim = len(v)
-        new_node = nodes[dim]
-        for i in range(dim):
-            v[i].append(self.B[i][new_node])
-        vertical = [self.B[dim][nodes[j]] for j in range(dim)]
-        vertical.append(self.B[dim][new_node])
-        v.append(vertical)
-        return v
-
-    ##########################################################
-    # Function for EIM Classic #
-    ##########################################################
-
-    def eim(self, verbose=False):
+    def build_eim(self, verbose=False):
 
         nodes = []
-        lebesgue_norms = []
-        k = []
-        matrices = []
+        V_matrix = None
+        first_node = np.argmax(np.abs(self.Basis[0]))
+        nodes.append(first_node)
 
-        new_node = np.argmax(np.abs(self.B[0]))
         if verbose:
-            print(new_node)
-        nodes.append(new_node)
-        V = [[self.B[0][new_node]]]
+            print(first_node)
 
-        for i in range(1, self.n):
-            matrices.append(V)
-            base_in_nodes = [self.B[i][t] for t in nodes]
-            invV = np.linalg.inv(V)
-            leb = two_norm(invV)
-            norm = two_norm(V)
-            k.append(norm * leb)
-            lebesgue_norms.append(leb)
-            C = np.matmul(base_in_nodes, invV)
-            base = self.B[:i]
-            interpolant = np.matmul(C, base)
-            residual = self.B[i] - interpolant
+        for i in range(1, self.Nbasis):
+            V_matrix = self.next_vandermonde(nodes, V_matrix)
+            base_at_nodes = [self.Basis[i,t] for t in nodes]
+            invV_matrix = np.linalg.inv(V_matrix)
+            step_basis = self.Basis[:i]
+            basis_interpolant = base_at_nodes @ invV_matrix @ step_basis
+            residual = self.Basis[i] - basis_interpolant
             new_node = np.argmax(abs(residual))
+
             if verbose:
                 print(new_node)
             nodes.append(new_node)
-            V = self.Vandermonde(V, nodes)
-        matrices.append(V)
-        invV = np.linalg.inv(V)
-        leb = two_norm(invV)
-        norm = two_norm(V)
-        k.append(norm * leb)
-        lebesgue_norms.append(leb)
 
+        V_matrix = self.next_vandermonde(nodes, V_matrix)
+        invV_matrix = np.linalg.inv(V_matrix)
+
+        self.Interpolant = self.Basis.transpose() @ invV_matrix
         self.eim_nodes = nodes
-        self.lebesgue = lebesgue_norms
-        self.k = k
-        self.matrices = matrices
+
+    # ==== Auxiliary functions ================================================
+    def next_vandermonde(self, nodes, vandermonde=None):
+        '''Build the next V-matrix from the previous one.'''
+        if vandermonde is None:
+            vandermonde = [[self.Basis[0, nodes[0]]]]
+            return vandermonde
+
+        n = len(vandermonde)
+        new_node = nodes[-1]
+        for i in range(n):
+            vandermonde[i].append(self.Basis[i][new_node])
+        vertical_vector = [self.Basis[n, nodes[j]] for j in range(n)]
+        vertical_vector.append(self.Basis[n, new_node])
+        vandermonde.append(vertical_vector)
+        return vandermonde
