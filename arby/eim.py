@@ -10,9 +10,9 @@ import numpy as np
 # Class for Empirical Interpolation Method
 # =========================================
 
+
 class EmpiricalMethods:
-    """Build an Empirical Interpolant matrix operator.
-    """
+    """Build an Empirical Interpolant matrix operator from a given basis."""
 
     def __init__(self, Basis):
         self.Basis = np.array(Basis)
@@ -23,7 +23,7 @@ class EmpiricalMethods:
     # ==== Classic EIM ========================================================
 
     def build_eim(self, verbose=False):
-
+        """Find EIM nodes and build Empirical Interpolant operator."""
         nodes = []
         V_matrix = None
         first_node = np.argmax(np.abs(self.Basis[0]))
@@ -34,7 +34,7 @@ class EmpiricalMethods:
 
         for i in range(1, self.Nbasis):
             V_matrix = self.next_vandermonde(nodes, V_matrix)
-            base_at_nodes = [self.Basis[i,t] for t in nodes]
+            base_at_nodes = [self.Basis[i, t] for t in nodes]
             invV_matrix = np.linalg.inv(V_matrix)
             step_basis = self.Basis[:i]
             basis_interpolant = base_at_nodes @ invV_matrix @ step_basis
@@ -53,7 +53,7 @@ class EmpiricalMethods:
 
     # ==== Auxiliary functions ================================================
     def next_vandermonde(self, nodes, vandermonde=None):
-        '''Build the next V-matrix from the previous one.'''
+        """Build the next V-matrix from the previous one."""
         if vandermonde is None:
             vandermonde = [[self.Basis[0, nodes[0]]]]
             return vandermonde
@@ -66,3 +66,12 @@ class EmpiricalMethods:
         vertical_vector.append(self.Basis[n, new_node])
         vandermonde.append(vertical_vector)
         return vandermonde
+
+    # ==== Validation functions ===============================================
+    def interpolate(self, h):
+        """Interpolate a function h at EIM nodes."""
+        assert len(h) == self.Nsamples, "Size of vector h doesn't "
+        "match grid size of basis elements."
+        h_at_nodes = np.array([h[eim_node] for eim_node in self.nodes])
+        h_interpolated = self.Interpolant @ h_at_nodes
+        return h_interpolated
