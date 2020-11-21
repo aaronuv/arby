@@ -17,6 +17,7 @@ class EmpiricalMethods:
     def __init__(self, Basis):
         self.Basis = np.array(Basis)
         self.Nbasis, self.Nsamples = self.Basis.shape
+        self.V_matrix = None
         self.eim_nodes = None
         self.Interpolant = None
 
@@ -45,9 +46,8 @@ class EmpiricalMethods:
                 print(new_node)
             nodes.append(new_node)
 
-        V_matrix = self.next_vandermonde(nodes, V_matrix)
-        invV_matrix = np.linalg.inv(V_matrix)
-
+        self.V_matrix = np.array(self.next_vandermonde(nodes, V_matrix))
+        invV_matrix = np.linalg.inv(self.V_matrix)
         self.Interpolant = self.Basis.transpose() @ invV_matrix
         self.eim_nodes = nodes
 
@@ -70,8 +70,8 @@ class EmpiricalMethods:
     # ==== Validation functions ===============================================
     def interpolate(self, h):
         """Interpolate a function h at EIM nodes."""
-        assert len(h) == self.Nsamples, "Size of vector h doesn't "
-        "match grid size of basis elements."
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.nodes])
+        assert len(h) == self.Nsamples, ("Size of vector h doesn't "
+                                        "match grid size of basis elements.")
+        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes])
         h_interpolated = self.Interpolant @ h_at_nodes
         return h_interpolated
