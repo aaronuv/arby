@@ -210,9 +210,9 @@ class ReducedBasis:
         h_interpolated = self.Interpolant @ h_at_nodes
         return h_interpolated
 
-
-# ==== ROM class ==============================================================
-
+# =================================
+# Class for Reduced Order Modeling
+# =================================
 
 class ROM:
     def __init__(
