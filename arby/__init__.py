@@ -3,7 +3,6 @@
 __version__ = "0.1a1"
 
 from .integrals import Integration
-from .greedy import ReducedBasis, GramSchmidt
-from .eim import EmpiricalMethods
+from .greedy import ReducedOrderModeling, GramSchmidt
 
-__all__ = [Integration, ReducedBasis, EmpiricalMethods, GramSchmidt]
+__all__ = [Integration, ReducedOrderModeling, GramSchmidt]

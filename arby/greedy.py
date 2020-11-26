@@ -6,14 +6,13 @@
 
 import numpy as np
 from .integrals import Integration
-from .eim import EmpiricalMethods
 from random import randint  # noqa: F401
 from scipy.interpolate import splrep, splev
 
-# ==========================================
-# Class for Iterated-Modified Gram-Schmidt
+# ===================================
+#    Iterated-Modified Gram-Schmidt
 #      Orthonormalization Method
-# ==========================================
+# ===================================
 
 
 def GS_add_element(h, basis, integration, a, max_iter):
@@ -77,52 +76,84 @@ def GramSchmidt(vectors, integration, a=0.5, max_iter=3):
     return basis
 
 
-# ===============================
-# Class for Reduced Basis Method
-# ===============================
+# =================================
+# Class for Reduced Order Modeling
+# =================================
 
 
-class ReducedBasis:
-    """Class for standard reduced basis greedy algorithm."""
+class ReducedOrderModeling:
+    def __init__(
+        self,
+        training_space=None,
+        physical_interval=None,
+        parameter_interval=None,
+        basis=None,
+    ):
+        # Check non empty inputs aiming for reduced order model
 
-    def __init__(self, training_space, interval, rule="riemann"):
-        self.training = np.array(training_space)
-        self.Ntrain, self.Nsamples = training_space.shape
-        self.loss = self.projection_error
-        self.integration = Integration(interval=interval,
-                                       num=self.Nsamples, rule=rule)
+        if training_space is not None and physical_interval is not None:
+            self.training_space = np.asarray(training_space)
+            self.Ntrain, self.Nsamples = self.training_space.shape
+            self.physical_interval = np.asarray(physical_interval)
+            if parameter_interval is not None:
+                self.parameter_interval = np.asarray(parameter_interval)
+                if self.Ntrain != self.parameter_interval.size:
+                    raise ValueError(
+                        "Number of training functions must be "
+                        "equal to number of parameter points."
+                    )
 
-    def build_rb(self, index_seed=0, tol=1e-12, verbose=False):
-        """Make a reduced basis using the standard greedy algorithm."""
-        # In seed gives a null function, iterate to a new seed
-        seed_function = self.training[index_seed]
+        self.basis = basis
+        self.integration = None
+
+        self.v_matrix = None
+        self.eim_nodes = None
+        self.interpolant = None
+
+    # ==== Reduced Basis Method ===============================================
+
+    def build_reduced_basis(
+        self, rule="riemann", index_seed=0, tol=1e-12, verbose=False
+    ):
+        phys_min = self.physical_interval.min()
+        phys_max = self.physical_interval.max()
+        self.integration = Integration(
+            interval=[phys_min, phys_max], num=self.Nsamples, rule=rule
+        )
+
+        self.loss = self.projection_error  # no me convence este atributo
+
+        # If seed gives a null function, iterate to a new seed
+        seed_function = self.training_space[index_seed]
         zero_function = np.zeros_like(seed_function)
         while np.allclose(seed_function, zero_function):
             index_seed = np.randint(1, self.Ntrain)
-            seed_function = self.training[index_seed]
+            seed_function = self.training_space[index_seed]
 
-        # ====== Seed the greedy algorithm and allocate memory ================
+        # ====== Seed the greedy algorithm and allocate memory ======
 
         # Validate inputs
         assert self.Nsamples == np.size(
             self.integration.weights
         ), "Number of samples is inconsistent with quadrature rule."
-
         # Allocate memory for greedy algorithm arrays
-        self.allocate(self.Ntrain, self.Nsamples, dtype=self.training.dtype)
+        self.allocate(self.Ntrain, self.Nsamples,
+                      dtype=self.training_space.dtype)
 
         # Compute norms of the training space data
-        self._norms = np.array([self.integration.norm(tt)
-                               for tt in self.training])
+        self._norms = np.array(
+            [self.integration.norm(tt) for tt in self.training_space]
+        )
 
         # Seed
-        self.indices = [index_seed]
-        self.basis[0] = self.training[index_seed] / self._norms[index_seed]
+        self.greedy_indices = [index_seed]
+        self.basis[0] = (self.training_space[index_seed] /
+                         self._norms[index_seed])
         self.basisnorms[0] = self._norms[index_seed]
         self.proj_matrix[0] = self.integration.dot(self.basis[0],
-                                                   self.training)
+                                                   self.training_space)
 
-        # ===== Start greedy loop =============================================
+        # ====== Start greedy loop ======
 
         if verbose:
             print("\n Step", "\t", "Error")
@@ -134,29 +165,106 @@ class ReducedBasis:
             errs = self.loss(self.proj_matrix[:nn], norms=self._norms)
             next_index = np.argmax(errs)
 
-            if next_index in self.indices:
-                self.size = nn - 1
-                self.trim(self.size)
+            if next_index in self.greedy_indices:
+                self.trim(nn - 1)
                 raise Exception("Index already selected: exiting "
                                 "greedy algorithm.")
 
-            self.indices.append(next_index)
+            self.greedy_indices.append(next_index)
             self.errors[nn - 1] = errs[next_index]
             self.basis[nn], self.basisnorms[nn] = GS_add_element(
-                self.training[self.indices[nn]],
+                self.training_space[self.greedy_indices[nn]],
                 self.basis[:nn],
                 self.integration,
                 a=0.5,
                 max_iter=3,
             )
-            self.proj_matrix[nn] = self.integration.dot(self.basis[nn],
-                                                        self.training)
+            self.proj_matrix[nn] = self.integration.dot(
+                self.basis[nn], self.training_space
+            )
             sigma = errs[next_index]
             if verbose:
                 print(nn, "\t", sigma)
         # Trim excess allocated entries
-        self.size = nn
-        self.trim(self.size)
+        self.trim(nn)
+
+    # ====== Empirical Interpolation Method ===================================
+
+    def build_eim(self, verbose=False):
+        """Find EIM nodes and build Empirical Interpolant operator."""
+
+        if self.basis is None:
+            raise AttributeError("There is no basis to work with.")
+
+        self.Nbasis, _ = self.basis.shape
+
+        nodes = []
+        v_matrix = None
+        first_node = np.argmax(np.abs(self.basis[0]))
+        nodes.append(first_node)
+
+        if verbose:
+            print(first_node)
+
+        for i in range(1, self.Nbasis):
+            v_matrix = self.next_vandermonde(nodes, v_matrix)
+            base_at_nodes = [self.basis[i, t] for t in nodes]
+            invV_matrix = np.linalg.inv(v_matrix)
+            step_basis = self.basis[:i]
+            basis_interpolant = base_at_nodes @ invV_matrix @ step_basis
+            residual = self.basis[i] - basis_interpolant
+            new_node = np.argmax(abs(residual))
+
+            if verbose:
+                print(new_node)
+            nodes.append(new_node)
+
+        v_matrix = np.array(self.next_vandermonde(nodes, v_matrix))
+        self.v_matrix = v_matrix.transpose()
+        invV_matrix = np.linalg.inv(self.v_matrix)
+        self.interpolant = self.basis.transpose() @ invV_matrix
+        self.eim_nodes = nodes
+
+    def build_splines(
+        self,
+        rule="riemann",
+        index_seed=0,
+        tol=1e-12,
+        verbose=False,
+        built_basis=False,
+        poly_deg=3,
+    ):
+
+        if not built_basis:
+            self.build_reduced_basis(
+                rule=rule, index_seed=index_seed, tol=tol, verbose=verbose
+            )
+
+        self.build_eim()
+
+        training_compressed = np.empty(
+            (self.Ntrain, self.basis.size), dtype=self.training_space.dtype
+        )
+        for i in range(self.Ntrain):
+            for j, node in enumerate(self.eim_nodes):
+                training_compressed[i, j] = self.training_space[i, node]
+        h_in_nodes_splined = []
+        for i in range(self.Nbasis):
+            h_in_nodes_splined.append(
+                splrep(self.parameter_interval,
+                       training_compressed[:, i],
+                       k=poly_deg)
+                )
+
+        self.spline_model = h_in_nodes_splined
+
+    def surrogate(self, parameter):
+        h_surr_at_nodes = np.array(
+            [splev(parameter, spline) for spline in self.spline_model]
+        )
+        h_surrogate = self.interpolant @ h_surr_at_nodes
+
+        return h_surrogate
 
     # ==== Auxiliary functions ================================================
 
@@ -181,84 +289,46 @@ class ReducedBasis:
         self.basis = self.basis[:num]
         self.proj_matrix = self.proj_matrix[:num]
 
+    def next_vandermonde(self, nodes, vandermonde=None):
+        """Build the next V-matrix from the previous one."""
+        if vandermonde is None:
+            vandermonde = [[self.basis[0, nodes[0]]]]
+            return vandermonde
+
+        n = len(vandermonde)
+        new_node = nodes[-1]
+        for i in range(n):
+            vandermonde[i].append(self.basis[i, new_node])
+        vertical_vector = [self.basis[n, nodes[j]] for j in range(n)]
+        vertical_vector.append(self.basis[n, new_node])
+        vandermonde.append(vertical_vector)
+        return vandermonde
+
     # ==== Validation functions ===============================================
 
-    # This function inherites homology operation property from .dot method from
-    # from integrals.py. Then h_vector may be an array of functions.
-    def proj_error_from_basis(self, basis, h_vector):
-        """Square of the projection error of a function h_vector on basis."""
-        h_vector_sqnorm = self.integration.norm(h_vector).real
-        inner_prod = np.array(
-            [self.integration.dot(basis_elem, h_vector)
-             for basis_elem in basis]
-        )
-        return h_vector_sqnorm ** 2 - np.linalg.norm(inner_prod) ** 2
+    # ~ # This function inherites homology operation property from .dot method
+    # ~ # from integrals.py. Then h_vector may be an array of functions.
+    # ~ def proj_error_from_basis(self, basis, h_vector):
+    # ~ """Square of the projection error of a function h_vector on basis."""
+    # ~ h_vector_sqnorm = self.integration.norm(h_vector).real
+    # ~ inner_prod = np.array(
+    # ~ [self.integration.dot(basis_elem, h_vector)
+    # ~ for basis_elem in basis]
+    # ~ )
+    # ~ return h_vector_sqnorm ** 2 - np.linalg.norm(inner_prod) ** 2
 
-    def project_on_basis(self, h, basis):
-        """Project a function h onto the basis functions"""
-        projected_function = 0.0
-        for e in basis:
-            projected_function += e * self.integration.dot(e, h)
-        return projected_function
+    # ~ def project_on_basis(self, h, basis):
+    # ~ """Project a function h onto the basis functions"""
+    # ~ projected_function = 0.0
+    # ~ for e in basis:
+    # ~ projected_function += e * self.integration.dot(e, h)
+    # ~ return projected_function
 
-    def interpolate(self, h):
-        """Interpolate a function h at EIM nodes."""
-        assert len(h) == self.Nsamples, (
-            "Size of vector h doesn't " "match grid size of basis elements."
-        )
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes])
-        h_interpolated = self.Interpolant @ h_at_nodes
-        return h_interpolated
-
-# =================================
-# Class for Reduced Order Modeling
-# =================================
-
-class ROM:
-    def __init__(
-        self,
-        training_space,
-        physical_interval,
-        parameter_interval,
-        reduced_basis=None,
-        rule="riemann",
-        index_seed=0,
-        tol=1e-12,
-        k=3,
-    ):
-        training_space = np.asarray(training_space)
-        Ntrain, Nsamples = training_space.shape
-        assert Ntrain == parameter_interval.size, (
-            "Number of training "
-            "functions must be equal to number of parameter points."
-        )
-        if reduced_basis is None:
-            phys_min = physical_interval.min()
-            phys_max = physical_interval.max()
-            rb = ReducedBasis(training_space, [phys_min, phys_max], rule=rule)
-            rb.build_rb(index_seed=index_seed, tol=tol)
-            self.reduced_basis = rb.basis
-        eim = EmpiricalMethods(self.reduced_basis)
-        eim.build_eim()
-        training_compressed = np.empty(
-            (Ntrain, self.reduced_basis.size), dtype=training_space.dtype
-        )
-        for i in range(Ntrain):
-            for j, node in enumerate(eim.eim_nodes):
-                training_compressed[i, j] = training_space[i, node]
-        h_in_nodes_splined = []
-        for i in range(rb.size):
-            h_in_nodes_splined.append(
-                splrep(parameter_interval, training_compressed[:, i], k=k)
-            )
-
-        self.Interpolant = eim.Interpolant
-        self.spline_model = h_in_nodes_splined
-
-    def surrogate(self, parameter):
-        h_surr_at_nodes = np.array(
-            [splev(parameter, spline) for spline in self.spline_model]
-        )
-        h_surrogate = self.Interpolant @ h_surr_at_nodes
-
-        return h_surrogate
+    # ~ def interpolate(self, h):
+    # ~ """Interpolate a function h at EIM nodes."""
+    # ~ assert len(h) == self.Nsamples, (
+    # ~ "Size of vector h doesn't " "match grid size of basis elements."
+    # ~ )
+    # ~ h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes])
+    # ~ h_interpolated = self.interpolant @ h_at_nodes
+    # ~ return h_interpolated
