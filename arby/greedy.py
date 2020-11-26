@@ -238,6 +238,7 @@ class ROM:
             rb = ReducedBasis(training_space, [phys_min, phys_max], rule=rule)
             rb.build_rb(index_seed=index_seed, tol=tol)
             self.reduced_basis = rb.basis
+            self.greedy_errors = rb.errors
         eim = EmpiricalMethods(self.reduced_basis)
         eim.build_eim()
         training_compressed = np.empty(
