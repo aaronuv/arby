@@ -95,6 +95,11 @@ class ReducedOrderModeling:
             self.training_space = np.asarray(training_space)
             self.Ntrain, self.Nsamples = self.training_space.shape
             self.physical_interval = np.asarray(physical_interval)
+            if self.Nsamples != self.physical_interval.size:
+                    raise ValueError(
+                        "Number of samples for each training function must be "
+                        "equal to number of physical points."
+                    )
             if parameter_interval is not None:
                 self.parameter_interval = np.asarray(parameter_interval)
                 if self.Ntrain != self.parameter_interval.size:
