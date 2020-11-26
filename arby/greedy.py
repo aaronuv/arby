@@ -171,7 +171,8 @@ class ReducedOrderModeling:
             next_index = np.argmax(errs)
 
             if next_index in self.greedy_indices:
-                self.trim(nn - 1)
+                self.Nbasis = nn
+                self.trim(self.Nbasis)
                 raise Exception("Index already selected: exiting "
                                 "greedy algorithm.")
 
@@ -191,7 +192,8 @@ class ReducedOrderModeling:
             if verbose:
                 print(nn, "\t", sigma)
         # Trim excess allocated entries
-        self.trim(nn)
+        self.Nbasis = nn + 1
+        self.trim(self.Nbasis)
 
     # ====== Empirical Interpolation Method ===================================
 
@@ -313,21 +315,21 @@ class ReducedOrderModeling:
 
     # ~ # This function inherites homology operation property from .dot method
     # ~ # from integrals.py. Then h_vector may be an array of functions.
-    # ~ def proj_error_from_basis(self, basis, h_vector):
-    # ~ """Square of the projection error of a function h_vector on basis."""
-    # ~ h_vector_sqnorm = self.integration.norm(h_vector).real
-    # ~ inner_prod = np.array(
-    # ~ [self.integration.dot(basis_elem, h_vector)
-    # ~ for basis_elem in basis]
-    # ~ )
-    # ~ return h_vector_sqnorm ** 2 - np.linalg.norm(inner_prod) ** 2
+    def proj_error_from_basis(self, basis, h_vector):
+        """Square of the projection error of a function h_vector on basis."""
+        h_vector_sqnorm = self.integration.norm(h_vector).real
+        inner_prod = np.array(
+        [self.integration.dot(basis_elem, h_vector)
+        for basis_elem in basis]
+        )
+        return h_vector_sqnorm ** 2 - np.linalg.norm(inner_prod) ** 2
 
-    # ~ def project_on_basis(self, h, basis):
-    # ~ """Project a function h onto the basis functions"""
-    # ~ projected_function = 0.0
-    # ~ for e in basis:
-    # ~ projected_function += e * self.integration.dot(e, h)
-    # ~ return projected_function
+    def project_on_basis(self, h, basis):
+        """Project a function h onto the basis functions"""
+        projected_function = 0.0
+        for e in basis:
+            projected_function += e * self.integration.dot(e, h)
+        return projected_function
 
     # ~ def interpolate(self, h):
     # ~ """Interpolate a function h at EIM nodes."""
