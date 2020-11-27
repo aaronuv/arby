@@ -12,7 +12,7 @@ class TestBesselExample(unittest.TestCase):
         "Test that the reduced basis matches ROMpy's for the same "
         "training data"
         nbasis, npoints = self.basis.shape
-        physical_inteval = np.linspace(0,1, npoints)
+        physical_inteval = np.linspace(0, 1, npoints)
         # build reduced basis
         rb_bessel = arby.ReducedOrderModeling(self.training, physical_inteval)
         rb_bessel.build_reduced_basis(tol=1e-12)
