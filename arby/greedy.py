@@ -5,6 +5,7 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 import numpy as np
+import logging
 from .integrals import Integration
 from random import randint  # noqa: F401
 from scipy.interpolate import splrep, splev
@@ -90,6 +91,8 @@ class ReducedOrderModeling:
         physical_interval=None,
         parameter_interval=None,
         basis=None,
+        integration_rule="riemann",
+        greedy_tol=1e-12
     ):
         # Check non empty inputs aiming for reduced order model
 
@@ -113,27 +116,30 @@ class ReducedOrderModeling:
                         "equal to number of parameter points."
                     )
 
-        self.basis = basis
-        self.integration = None
+            phys_min = self.physical_interval.min()
+            phys_max = self.physical_interval.max()
+            self.integration = Integration(interval=[phys_min, phys_max],
+                                           num=self.Nsamples,
+                                           rule=integration_rule
+                                           )
+        self.greedy_tol = greedy_tol
+        self.logger = logging.getLogger()
+        self._basis = basis
 
         self.v_matrix = None
         self.eim_nodes = None
         self.interpolant = None
 
     # ==== Reduced Basis Method ===============================================
-
-    def build_reduced_basis(
-        self, rule="riemann", index_seed=0, tol=1e-12, verbose=False
-    ):
-        phys_min = self.physical_interval.min()
-        phys_max = self.physical_interval.max()
-        self.integration = Integration(
-            interval=[phys_min, phys_max], num=self.Nsamples, rule=rule
-        )
+    @property
+    def basis(self):
+        if self._basis is not None:
+            return self._basis
 
         self.loss = self.projection_error  # no me convence este atributo
 
-        # Select a new seed in case of null function seed
+        # If seed gives a null function, iterate to a new seed
+        index_seed = 0
         seed_function = self.training_space[index_seed]
         zero_function = np.zeros_like(seed_function)
         while np.allclose(seed_function, zero_function):
@@ -146,64 +152,70 @@ class ReducedOrderModeling:
         assert self.Nsamples == np.size(
             self.integration.weights
         ), "Number of samples is inconsistent with quadrature rule."
-
         # Allocate memory for greedy algorithm arrays
-        self.allocate(self.Ntrain, self.Nsamples,
-                      dtype=self.training_space.dtype)
+        self.allocate(
+            self.Ntrain, self.Nsamples, dtype=self.training_space.dtype
+        )
 
-        # Compute the training function norms
+        # Compute norms of the training space data
         self._norms = np.array(
             [self.integration.norm(tt) for tt in self.training_space]
         )
 
         # Seed
         self.greedy_indices = [index_seed]
-        self.basis[0] = (self.training_space[index_seed] /
-                         self._norms[index_seed])
+        self._basis = np.empty_like(self.training_space)
+        self._basis[0] = (
+            self.training_space[index_seed] / self._norms[index_seed]
+        )
         self.basisnorms[0] = self._norms[index_seed]
-        self.proj_matrix[0] = self.integration.dot(self.basis[0],
-                                                   self.training_space)
+        self.proj_matrix[0] = self.integration.dot(
+            self._basis[0], self.training_space
+        )
 
         # ====== Start greedy loop ======
 
-        if verbose:
-            print("\n Step", "\t", "Error")
-
+        self.logger.debug("\n Step", "\t", "Error")
         nn = 0
         sigma = 1.0
-        while sigma > tol:
+        while sigma > self.greedy_tol:
             nn += 1
             errs = self.loss(self.proj_matrix[:nn], norms=self._norms)
             next_index = np.argmax(errs)
 
-            # Intrinsic dimensionality detention condition
             if next_index in self.greedy_indices:
+                # Trim excess allocated entries
+                self.trim(nn)
+                self._basis = self._basis[: nn]
                 self.Nbasis = nn
-                self.trim(self.Nbasis)
-                return
+                # raise Exception(
+                #    "Index already selected: exiting " "greedy algorithm."
+                # )
+                return self._basis
 
             self.greedy_indices.append(next_index)
             self.errors[nn - 1] = errs[next_index]
-            self.basis[nn], self.basisnorms[nn] = GS_add_element(
+            self._basis[nn], self.basisnorms[nn] = GS_add_element(
                 self.training_space[self.greedy_indices[nn]],
-                self.basis[:nn],
+                self._basis[:nn],
                 self.integration,
                 a=0.5,
                 max_iter=3,
             )
             self.proj_matrix[nn] = self.integration.dot(
-                self.basis[nn], self.training_space
+                self._basis[nn], self.training_space
             )
             sigma = errs[next_index]
-            if verbose:
-                print(nn, "\t", sigma)
+            self.logger.debug(nn, "\t", sigma)
         # Trim excess allocated entries
+        self.trim(nn + 1)
+        self._basis = self._basis[:nn + 1]
         self.Nbasis = nn + 1
-        self.trim(self.Nbasis)
+        return self._basis
 
     # ====== Empirical Interpolation Method ===================================
 
-    def build_eim(self, verbose=False):
+    def build_eim(self):
         """Find EIM nodes and build Empirical Interpolant operator."""
 
         if self.basis is None:
@@ -216,8 +228,7 @@ class ReducedOrderModeling:
         first_node = np.argmax(np.abs(self.basis[0]))
         nodes.append(first_node)
 
-        if verbose:
-            print(first_node)
+        self.logger.debug(first_node)
 
         for i in range(1, self.Nbasis):
             v_matrix = self.next_vandermonde(nodes, v_matrix)
@@ -228,8 +239,7 @@ class ReducedOrderModeling:
             residual = self.basis[i] - basis_interpolant
             new_node = np.argmax(abs(residual))
 
-            if verbose:
-                print(new_node)
+            self.logger.debug(new_node)
             nodes.append(new_node)
 
         v_matrix = np.array(self.next_vandermonde(nodes, v_matrix))
@@ -237,6 +247,8 @@ class ReducedOrderModeling:
         invV_matrix = np.linalg.inv(self.v_matrix)
         self.interpolant = self.basis.transpose() @ invV_matrix
         self.eim_nodes = nodes
+
+    # ==== Surrogate Methods ==================================================
 
     def build_splines(
         self,
@@ -279,12 +291,11 @@ class ReducedOrderModeling:
 
         return h_surrogate
 
-    # ==== Auxiliary functions ================================================
+    # ==== Auxiliary methods ==================================================
 
     def allocate(self, Npoints, Nquads, dtype="complex"):
         """Allocate memory for numpy arrays used for making reduced basis"""
         self.errors = np.empty(Npoints, dtype="double")
-        self.basis = np.empty((Npoints, Nquads), dtype=dtype)
         self.basisnorms = np.empty(Npoints, dtype="double")
         self.proj_matrix = np.empty((Npoints, Npoints), dtype=dtype)
 
@@ -299,7 +310,6 @@ class ReducedOrderModeling:
     def trim(self, num):
         """Trim arrays to have size num"""
         self.errors = self.errors[:num]
-        self.basis = self.basis[:num]
         self.proj_matrix = self.proj_matrix[:num]
 
     def next_vandermonde(self, nodes, vandermonde=None):
@@ -317,7 +327,7 @@ class ReducedOrderModeling:
         vandermonde.append(vertical_vector)
         return vandermonde
 
-    # ==== Validation functions ===============================================
+    # ==== Validation methods =================================================
 
     # ~ # This function inherites homology operation property from .dot method
     # ~ # from integrals.py. Then h_vector may be an array of functions.
