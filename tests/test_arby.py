@@ -15,7 +15,7 @@ class TestArby(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu])
         # build reduced basis
-        rb = arby.ReducedOrderModeling(training, x, greedy_tol=1e-14)
+        rb = arby.ReducedOrderModeling(training, x, greedy_tol=1e-12)
 
         # Assert that basis has correct shape
         self.assertEqual(rb.basis.ndim, 2)

@@ -131,9 +131,11 @@ class ReducedOrderModeling:
         self.interpolant = None
 
     # ==== Reduced Basis Method ===============================================
+
     @property
     def basis(self):
         if self._basis is not None:
+            self.Nbasis = self._basis.shape[0]
             return self._basis
 
         self.loss = self.projection_error  # no me convence este atributo
@@ -219,9 +221,7 @@ class ReducedOrderModeling:
         """Find EIM nodes and build Empirical Interpolant operator."""
 
         if self.basis is None:
-            raise AttributeError("There is no basis to work with.")
-
-        self.Nbasis, _ = self.basis.shape
+            raise ValueError("There is no basis to work with.")
 
         nodes = []
         v_matrix = None
