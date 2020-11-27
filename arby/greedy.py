@@ -34,8 +34,10 @@ def GS_add_element(h, basis, integration, a, max_iter):
             norm = new_norm
             ctr += 1
             if ctr > max_iter:
-                raise Exception("Gram-Schmidt: max number of iterations"
-                                "reached.")
+                raise Exception("Gram-Schmidt: max number of iterations "
+                                "reached. Functions may not be linearly "
+                                "independent."
+                                )
         else:
             flag = 1
 
@@ -95,11 +97,14 @@ class ReducedOrderModeling:
             self.training_space = np.asarray(training_space)
             self.Ntrain, self.Nsamples = self.training_space.shape
             self.physical_interval = np.asarray(physical_interval)
+            if self.Ntrain > self.Nsamples:
+                raise ValueError("Number of samples must be greater than "
+                                 "number of training functions.")
             if self.Nsamples != self.physical_interval.size:
-                    raise ValueError(
-                        "Number of samples for each training function must be "
-                        "equal to number of physical points."
-                    )
+                raise ValueError(
+                    "Number of samples for each training function must be "
+                    "equal to number of physical points."
+                                    )
             if parameter_interval is not None:
                 self.parameter_interval = np.asarray(parameter_interval)
                 if self.Ntrain != self.parameter_interval.size:
@@ -128,7 +133,7 @@ class ReducedOrderModeling:
 
         self.loss = self.projection_error  # no me convence este atributo
 
-        # If seed gives a null function, iterate to a new seed
+        # Select a new seed in case of null function seed
         seed_function = self.training_space[index_seed]
         zero_function = np.zeros_like(seed_function)
         while np.allclose(seed_function, zero_function):
@@ -141,11 +146,12 @@ class ReducedOrderModeling:
         assert self.Nsamples == np.size(
             self.integration.weights
         ), "Number of samples is inconsistent with quadrature rule."
+
         # Allocate memory for greedy algorithm arrays
         self.allocate(self.Ntrain, self.Nsamples,
                       dtype=self.training_space.dtype)
 
-        # Compute norms of the training space data
+        # Compute the training function norms
         self._norms = np.array(
             [self.integration.norm(tt) for tt in self.training_space]
         )
@@ -170,11 +176,11 @@ class ReducedOrderModeling:
             errs = self.loss(self.proj_matrix[:nn], norms=self._norms)
             next_index = np.argmax(errs)
 
+            # Intrinsic dimensionality detention condition
             if next_index in self.greedy_indices:
                 self.Nbasis = nn
                 self.trim(self.Nbasis)
-                raise Exception("Index already selected: exiting "
-                                "greedy algorithm.")
+                return
 
             self.greedy_indices.append(next_index)
             self.errors[nn - 1] = errs[next_index]
@@ -319,9 +325,9 @@ class ReducedOrderModeling:
         """Square of the projection error of a function h_vector on basis."""
         h_vector_sqnorm = self.integration.norm(h_vector).real
         inner_prod = np.array(
-        [self.integration.dot(basis_elem, h_vector)
-        for basis_elem in basis]
-        )
+                              [self.integration.dot(basis_elem, h_vector)
+                               for basis_elem in basis]
+                              )
         return h_vector_sqnorm ** 2 - np.linalg.norm(inner_prod) ** 2
 
     def project_on_basis(self, h, basis):
