@@ -25,7 +25,7 @@ class TestArby(unittest.TestCase):
         expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
         nbasis, npoints = expected_basis.shape
         integration = arby.Integration([0, 1], num=npoints, rule="riemann")
-        computed_basis = arby.GramSchmidt(expected_basis, integration)
+        computed_basis = arby.gram_schmidt(expected_basis, integration)
         self.assertTrue(
             np.allclose(computed_basis, expected_basis, rtol=1e-5, atol=1e-8)
         )

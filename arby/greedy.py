@@ -16,12 +16,39 @@ from scipy.interpolate import splrep, splev
 # ===================================
 
 
-def GS_add_element(h, basis, integration, a, max_iter):
-    """
-    Iterated modified Gram-Schmidt algorithm for building an orthonormal
-    basis. Algorithm from Hoffman, `Iterative Algorithms for Gram-Schmidt
-    Orthogonalization`. Given a function, h, find the corresponding basis
-    function orthonormal to all previous ones.
+def gs_one_element(h, basis, integration, a=0.5, max_iter=3):
+    """ Orthonormilizes a function against an orthonormal basis.
+
+    It is implemented the Iterated, Modified Gram-Schmidt (GS) algorithm to
+    build an orthonormal basis from a set of functions.
+
+    Parameters
+    ----------
+        h : array_like, shape=(L,1)
+            Function to be orthonormalized, where L is the sample number.
+        basis: array_like, shape=(n,L)
+            Orthonormal basis functions, where n is the number of basis
+            elements.
+        integration: arby.integrals.Integration
+            Instance of the Integration class.
+        a : float, optional
+            Detention parameter. Default = 0.5.
+        max_iter: int, optional
+            Maximum number of interations. Default = 3.
+
+    Returns
+    -------
+        A list with the orthonormalized function and its norm.
+
+    Raises
+    ------
+        StopIteration
+        If max number of iterations in GS algorithm is reached.
+
+    References
+    ----------
+        Hoffmann, W. Iterative algorithms for Gram-Schmidt orthogonalization.
+        Computing 41, 335–348 (1989). https://doi.org/10.1007/BF02241222
     """
     norm = integration.norm(h)
     e = h / norm
@@ -35,42 +62,55 @@ def GS_add_element(h, basis, integration, a, max_iter):
             norm = new_norm
             ctr += 1
             if ctr > max_iter:
-                raise Exception("Gram-Schmidt: max number of iterations "
-                                "reached. Functions may not be linearly "
-                                "independent."
-                                )
+                raise StopIteration("Gram-Schmidt algorithm: max number of "
+                                    "iterations reached."
+                                    )
         else:
             flag = 1
 
     return [e / new_norm, new_norm]
 
 
-def GramSchmidt(vectors, integration, a=0.5, max_iter=3):
-    """Class for building an orthonormal basis using the iterated,
-    modified Gram-Schmidt procedure.
-    Input
-    -----
-    vectors: set of vectors to orthonormalize
-    integration: instance of Integration class that defines the inner product
+def gram_schmidt(functions, integration, a=0.5, max_iter=3):
+    """Orthonormalizes a set of functions.
 
-    Output is an array of orthonormal basis elements.
+    Parameters
+    ----------
+        functions: array_like, shape=(m,L)
+            Functions to be orthonormalized, where m is the number of functions
+            and L is the sample number.
+        integration: arby.integrals.Integration
+            Instance of the Integration class.
+        a : float, optional
+            Detention parameter. Default = 0.5.
+        max_iter: int, optional
+            Maximum number of interations. Default = 3.
+
+    Returns
+    -------
+        basis: numpy.array
+            Orthonormalized array.
+
+    Raises
+    ------
+    ValueError
+        If functions are not linearly independent.
     """
-
-    Nbasis, Nnodes = np.shape(vectors)
-    functions = np.asarray(vectors)
+    functions = np.asarray(functions)
+    Nbasis = functions.shape[0]
 
     _, svds, _ = np.linalg.svd(functions)
 
     linear_indep_tol = 5e-15
     if min(svds) < linear_indep_tol:
-        raise Exception("Functions are not linearly independent.")
+        raise ValueError("Functions are not linearly independent.")
 
     ortho_basis = []
     # First element of the basis is special, it's just normalized
     ortho_basis.append(integration.normalize(functions[0]))
     # For the rest of basis elements add them one by one by extending basis
     for new_basis_elem in functions[1:]:
-        projected_element, _ = GS_add_element(
+        projected_element, _ = gs_one_element(
             new_basis_elem, ortho_basis, integration, a, max_iter
         )
         ortho_basis.append(projected_element)
@@ -85,8 +125,32 @@ def GramSchmidt(vectors, integration, a=0.5, max_iter=3):
 
 
 class ReducedOrderModeling:
-    def __init__(
-        self,
+    """Build reduced order models from training data.
+
+	This class comprises a set of tools to build and manage reduced bases,
+	empirical interpolants and predictive models from a pre-computed training
+	space of functions which underlying model g(v,x) is a real or complex
+	function parameterized by v, the "training" parameter. The dual variable x
+	represents the physical domain. The adjective "physical" is a convention.
+
+    Parameters
+    ----------
+    training_space: array_like, optional
+        Array of training functions. Default = None.
+    physical_interval: array_like, optional
+        Array of physical points. Default = None.
+    parameter_interval: array_like, optional
+        Array of parameter points. Default = None.
+	basis: array_like, optional
+        If None (default), reduced basis built from training data. If not None,
+        any user specified basis.
+    integration_rule: str, optional
+        The cuadrature rule to define an integration scheme. Default = Riemann.
+    greedy_tol: float, optional
+        The greedy tolerance as a stopping condition for the reduced basis
+        greedy algorithm. Default = 1e-12.
+	"""
+    def __init__(self,
         training_space=None,
         physical_interval=None,
         parameter_interval=None,
@@ -135,6 +199,7 @@ class ReducedOrderModeling:
     @property
     def basis(self):
         if self._basis is not None:
+            self._basis = np.asarray(self._basis)
             self.Nbasis = self._basis.shape[0]
             return self._basis
 
@@ -197,12 +262,10 @@ class ReducedOrderModeling:
 
             self.greedy_indices.append(next_index)
             self.errors[nn - 1] = errs[next_index]
-            self._basis[nn], self.basisnorms[nn] = GS_add_element(
+            self._basis[nn], self.basisnorms[nn] = gs_one_element(
                 self.training_space[self.greedy_indices[nn]],
                 self._basis[:nn],
-                self.integration,
-                a=0.5,
-                max_iter=3,
+                self.integration
             )
             self.proj_matrix[nn] = self.integration.dot(
                 self._basis[nn], self.training_space
