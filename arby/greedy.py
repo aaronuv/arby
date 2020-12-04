@@ -17,16 +17,13 @@ from scipy.interpolate import splrep, splev
 
 
 def gs_one_element(h, basis, integration, a=0.5, max_iter=3):
-    """ Orthonormilizes a function against an orthonormal basis.
-
-    It is implemented the Iterated, Modified Gram-Schmidt (GS) algorithm to
-    build an orthonormal basis from a set of functions.
+    """ Orthonormilize a function against an orthonormal basis.
 
     Parameters
     ----------
-        h : array_like, shape=(L,1)
+        h : array_like, shape=(L, 1)
             Function to be orthonormalized, where L is the sample number.
-        basis: array_like, shape=(n,L)
+        basis: array_like, shape=(n, L)
             Orthonormal basis functions, where n is the number of basis
             elements.
         integration: arby.integrals.Integration
@@ -43,12 +40,15 @@ def gs_one_element(h, basis, integration, a=0.5, max_iter=3):
     Raises
     ------
         StopIteration
-        If max number of iterations in GS algorithm is reached.
+            If max number of iterations in GS algorithm is reached.
 
-    References
-    ----------
-        Hoffmann, W. Iterative algorithms for Gram-Schmidt orthogonalization.
-        Computing 41, 335–348 (1989). https://doi.org/10.1007/BF02241222
+    Notes
+    -----
+        This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
+        algorithm to build an orthonormal basis from a set of functions
+        described in Hoffmann, W. Iterative algorithms for Gram-Schmidt
+        orthogonalization. Computing 41, 335–348 (1989).
+        https://doi.org/10.1007/BF02241222
     """
     norm = integration.norm(h)
     e = h / norm
@@ -72,11 +72,11 @@ def gs_one_element(h, basis, integration, a=0.5, max_iter=3):
 
 
 def gram_schmidt(functions, integration, a=0.5, max_iter=3):
-    """Orthonormalizes a set of functions.
+    """Orthonormalize a set of functions.
 
     Parameters
     ----------
-        functions: array_like, shape=(m,L)
+        functions: array_like, shape=(m, L)
             Functions to be orthonormalized, where m is the number of functions
             and L is the sample number.
         integration: arby.integrals.Integration
@@ -97,7 +97,6 @@ def gram_schmidt(functions, integration, a=0.5, max_iter=3):
         If functions are not linearly independent.
     """
     functions = np.asarray(functions)
-    Nbasis = functions.shape[0]
 
     _, svds, _ = np.linalg.svd(functions)
 
@@ -127,11 +126,12 @@ def gram_schmidt(functions, integration, a=0.5, max_iter=3):
 class ReducedOrderModeling:
     """Build reduced order models from training data.
 
-	This class comprises a set of tools to build and manage reduced bases,
-	empirical interpolants and predictive models from a pre-computed training
-	space of functions which underlying model g(v,x) is a real or complex
-	function parameterized by v, the "training" parameter. The dual variable x
-	represents the physical domain. The adjective "physical" is a convention.
+    This class comprises a set of tools to build and manage reduced bases,
+    empirical interpolants and predictive models from a pre-computed training
+    space of functions. The underlying model g(v,x) describing the training
+    space is a real or complex function parameterized by v called the
+    "training" parameter. The dual variable x, called the "physical" variable,
+    belongs to the domain in which it is defined an inner product.
 
     Parameters
     ----------
@@ -141,7 +141,7 @@ class ReducedOrderModeling:
         Array of physical points. Default = None.
     parameter_interval: array_like, optional
         Array of parameter points. Default = None.
-	basis: array_like, optional
+    basis: array_like, optional
         If None (default), reduced basis built from training data. If not None,
         any user specified basis.
     integration_rule: str, optional
@@ -149,17 +149,30 @@ class ReducedOrderModeling:
     greedy_tol: float, optional
         The greedy tolerance as a stopping condition for the reduced basis
         greedy algorithm. Default = 1e-12.
-	"""
-    def __init__(self,
-        training_space=None,
-        physical_interval=None,
-        parameter_interval=None,
-        basis=None,
-        integration_rule="riemann",
-        greedy_tol=1e-12
-    ):
-        # Check non empty inputs aiming for reduced order model
+    """
+    training_space = None
+    """Training functions (numpy.array)."""
+    Ntrain = None
+    """Number training functions or parameter points (int)."""
+    Nsamples = None
+    """Number of sample or physical points (int)."""
+    physical_interval = None
+    """Sample points (numpy.array)."""
+    parameter_interval = None
+    """Parameter points (numpy.array)."""
+    integration = None
+    """Instance of the Integration class (arby.integrals.Integration)."""
+    greedy_tol = 1e-12
+    """The greedy tolerance (float)."""
 
+    def __init__(self,
+                 training_space=None,
+                 physical_interval=None,
+                 parameter_interval=None,
+                 basis=None,
+                 integration_rule="riemann",
+                 greedy_tol=1e-12):
+        # Check non empty inputs with the aim of build a reduced order model
         if training_space is not None and physical_interval is not None:
             self.training_space = np.asarray(training_space)
             self.Ntrain, self.Nsamples = self.training_space.shape
@@ -187,23 +200,46 @@ class ReducedOrderModeling:
                                            rule=integration_rule
                                            )
         self.greedy_tol = greedy_tol
-        self.logger = logging.getLogger()
+        self._logger = logging.getLogger()
         self._basis = basis
-
-        self.v_matrix = None
-        self.eim_nodes = None
-        self.interpolant = None
 
     # ==== Reduced Basis Method ===============================================
 
     @property
     def basis(self):
+        """Array of basis elements.
+
+        If not None, it returns a user-specified basis. If None, this property
+        method builds a reduced basis from a given training space of functions.
+
+        All instantiation parameters are specified in the class constructor.
+
+        Returns
+        -------
+        basis: numpy.array
+
+        Created Attributes
+        ------------------
+        Nbasis: int
+            Number of basis elements.
+        greedy_indices: list(int)
+            Set of indices corresponding to greedy points.
+        proj_matrix: numpy.array, shape (Nbasis,Ntrain)
+            Stores the projection coefficients built in the greedy reduced
+            basis greedy algorithm.
+
+        Raises
+        ------
+        ValueError
+            If Nsamples do not coincides with weights of the quadrature rule.
+        """
+
         if self._basis is not None:
             self._basis = np.asarray(self._basis)
             self.Nbasis = self._basis.shape[0]
             return self._basis
 
-        self.loss = self.projection_error  # no me convence este atributo
+        self._loss = self.projection_error  # no me convence este atributo
 
         # If seed gives a null function, iterate to a new seed
         index_seed = 0
@@ -216,11 +252,12 @@ class ReducedOrderModeling:
         # ====== Seed the greedy algorithm and allocate memory ======
 
         # Validate inputs
-        assert self.Nsamples == np.size(
-            self.integration.weights
-        ), "Number of samples is inconsistent with quadrature rule."
+        if self.Nsamples != np.size(self.integration.weights):
+            raise ValueError("Number of samples is inconsistent "
+                             "with quadrature rule.")
+
         # Allocate memory for greedy algorithm arrays
-        self.allocate(
+        self._allocate(
             self.Ntrain, self.Nsamples, dtype=self.training_space.dtype
         )
 
@@ -235,34 +272,31 @@ class ReducedOrderModeling:
         self._basis[0] = (
             self.training_space[index_seed] / self._norms[index_seed]
         )
-        self.basisnorms[0] = self._norms[index_seed]
+        self._basisnorms[0] = self._norms[index_seed]
         self.proj_matrix[0] = self.integration.dot(
             self._basis[0], self.training_space
         )
 
-        # ====== Start greedy loop ======
+        errs = self._loss(self.proj_matrix[:1], norms=self._norms)
+        next_index = np.argmax(errs)
+        self.greedy_errors[0] = errs[next_index]
+        sigma = self.greedy_errors[0]
 
-        self.logger.debug("\n Step", "\t", "Error")
+        # ====== Start greedy loop ======
+        self._logger.debug("\n Step", "\t", "Error")
         nn = 0
-        sigma = 1.0
         while sigma > self.greedy_tol:
             nn += 1
-            errs = self.loss(self.proj_matrix[:nn], norms=self._norms)
-            next_index = np.argmax(errs)
 
             if next_index in self.greedy_indices:
                 # Trim excess allocated entries
-                self.trim(nn)
+                self._trim(nn)
                 self._basis = self._basis[: nn]
                 self.Nbasis = nn
-                # raise Exception(
-                #    "Index already selected: exiting " "greedy algorithm."
-                # )
                 return self._basis
 
             self.greedy_indices.append(next_index)
-            self.errors[nn - 1] = errs[next_index]
-            self._basis[nn], self.basisnorms[nn] = gs_one_element(
+            self._basis[nn], self._basisnorms[nn] = gs_one_element(
                 self.training_space[self.greedy_indices[nn]],
                 self._basis[:nn],
                 self.integration
@@ -270,10 +304,15 @@ class ReducedOrderModeling:
             self.proj_matrix[nn] = self.integration.dot(
                 self._basis[nn], self.training_space
             )
+            errs = self._loss(self.proj_matrix[:nn + 1], norms=self._norms)
+            next_index = np.argmax(errs)
+            self.greedy_errors[nn] = errs[next_index]
+
             sigma = errs[next_index]
-            self.logger.debug(nn, "\t", sigma)
+
+            self._logger.debug(nn, "\t", sigma)
         # Trim excess allocated entries
-        self.trim(nn + 1)
+        self._trim(nn + 1)
         self._basis = self._basis[:nn + 1]
         self.Nbasis = nn + 1
         return self._basis
@@ -281,7 +320,26 @@ class ReducedOrderModeling:
     # ====== Empirical Interpolation Method ===================================
 
     def build_eim(self):
-        """Find EIM nodes and build Empirical Interpolant operator."""
+        """Find EIM nodes and build Empirical Interpolant matrix.
+
+        it implements the Empirical Interpolation Method to select a set of
+        interpolation nodes from the physical interval and build an interpolant
+        matrix.
+
+        Created Attributes
+        ------------------
+        v_matrix: numpy.array, shape=(Nbasis, Nbasis)
+            The Vandermonde matrix associated to the basis.
+        interpolant: numpy.array, shape=(Nsamples, Nbasis)
+            Interpolant matrix.
+        eim_nodes: list(int)
+            List of interpolation nodes.
+
+        Raises
+        ------
+        ValueError
+            If there is no basis for EIM.
+        """
 
         if self.basis is None:
             raise ValueError("There is no basis to work with.")
@@ -291,10 +349,10 @@ class ReducedOrderModeling:
         first_node = np.argmax(np.abs(self.basis[0]))
         nodes.append(first_node)
 
-        self.logger.debug(first_node)
+        self._logger.debug(first_node)
 
         for i in range(1, self.Nbasis):
-            v_matrix = self.next_vandermonde(nodes, v_matrix)
+            v_matrix = self._next_vandermonde(nodes, v_matrix)
             base_at_nodes = [self.basis[i, t] for t in nodes]
             invV_matrix = np.linalg.inv(v_matrix)
             step_basis = self.basis[:i]
@@ -302,10 +360,10 @@ class ReducedOrderModeling:
             residual = self.basis[i] - basis_interpolant
             new_node = np.argmax(abs(residual))
 
-            self.logger.debug(new_node)
+            self._logger.debug(new_node)
             nodes.append(new_node)
 
-        v_matrix = np.array(self.next_vandermonde(nodes, v_matrix))
+        v_matrix = np.array(self._next_vandermonde(nodes, v_matrix))
         self.v_matrix = v_matrix.transpose()
         invV_matrix = np.linalg.inv(self.v_matrix)
         self.interpolant = self.basis.transpose() @ invV_matrix
@@ -313,21 +371,21 @@ class ReducedOrderModeling:
 
     # ==== Surrogate Methods ==================================================
 
-    def build_splines(
-        self,
-        rule="riemann",
-        index_seed=0,
-        tol=1e-12,
-        verbose=False,
-        built_basis=False,
-        poly_deg=3,
-    ):
+    def build_splines(self, poly_deg=3):
+        """Build the surrogate model.
 
-        if not built_basis:
-            self.build_reduced_basis(
-                rule=rule, index_seed=index_seed, tol=tol, verbose=verbose
-            )
+        Calling the basis property and build_eim methods, it builds a complete
+        surrogate model for the parameter and physical domains.
 
+        Parameters
+        ----------
+        poly_deg: int, optional
+            Degree of the polynomials used for building splines.
+
+        See Also
+        --------
+        surrogate
+        """
         self.build_eim()
 
         training_compressed = np.empty(
@@ -344,11 +402,23 @@ class ReducedOrderModeling:
                        k=poly_deg)
                 )
 
-        self.spline_model = h_in_nodes_splined
+        self._spline_model = h_in_nodes_splined
 
-    def surrogate(self, parameter):
+    def surrogate(self, param):
+        """Surrogate evaluation at a given parameter.
+
+        Parameters
+        ----------
+        param: float or array_like(float)
+            Point or set of parameters.
+
+        Returns
+        -------
+        h_surrogate: numpy.array
+            The evaluated surrogate function.
+        """
         h_surr_at_nodes = np.array(
-            [splev(parameter, spline) for spline in self.spline_model]
+            [splev(param, spline) for spline in self._spline_model]
         )
         h_surrogate = self.interpolant @ h_surr_at_nodes
 
@@ -356,27 +426,41 @@ class ReducedOrderModeling:
 
     # ==== Auxiliary methods ==================================================
 
-    def allocate(self, Npoints, Nquads, dtype="complex"):
-        """Allocate memory for numpy arrays used for making reduced basis"""
-        self.errors = np.empty(Npoints, dtype="double")
-        self.basisnorms = np.empty(Npoints, dtype="double")
-        self.proj_matrix = np.empty((Npoints, Npoints), dtype=dtype)
-
     def projection_error(self, proj_matrix, norms):
-        """Square of the projection error of a function h on basis in terms
-        of pre-computed projection matrix"""
+        """ Square of projection errors.
+
+        Parameters
+        ----------
+        proj_matrix: numpy.array, shape=(n,Ntrain)
+            Stores the projection coefficients of the training functions. n
+            is the number of basis elements of the actual reduced space.
+        norms: numpy.array, shape=(Ntrain)
+            Stores the norms of the training functions.
+
+        Returns
+        -------
+        proj_errors: numpy.array, shape=(Ntrain)
+            Squared projection errors.
+        """
         proj_norms = np.array(
             [np.linalg.norm(proj_matrix[:, i]) for i in range(self.Ntrain)]
         )
-        return norms ** 2 - proj_norms ** 2
+        proj_errors = norms ** 2 - proj_norms ** 2
+        return proj_errors
 
-    def trim(self, num):
-        """Trim arrays to have size num"""
-        self.errors = self.errors[:num]
+    def _allocate(self, Npoints, Nquads, dtype="complex"):
+        """Allocate memory for numpy arrays used for building reduced basis."""
+        self.greedy_errors = np.empty(Npoints, dtype="double")
+        self._basisnorms = np.empty(Npoints, dtype="double")
+        self.proj_matrix = np.empty((Npoints, Npoints), dtype=dtype)
+
+    def _trim(self, num):
+        """Trim arrays to have size num."""
+        self.greedy_errors = self.greedy_errors[:num]
         self.proj_matrix = self.proj_matrix[:num]
 
-    def next_vandermonde(self, nodes, vandermonde=None):
-        """Build the next V-matrix from the previous one."""
+    def _next_vandermonde(self, nodes, vandermonde=None):
+        """Build the next Vandermonde matrix from the previous one."""
         if vandermonde is None:
             vandermonde = [[self.basis[0, nodes[0]]]]
             return vandermonde
@@ -396,12 +480,12 @@ class ReducedOrderModeling:
     # ~ # from integrals.py. Then h_vector may be an array of functions.
     def proj_error_from_basis(self, basis, h_vector):
         """Square of the projection error of a function h_vector on basis."""
-        h_vector_sqnorm = self.integration.norm(h_vector).real
+        h_vector_norm = self.integration.norm(h_vector).real
         inner_prod = np.array(
                               [self.integration.dot(basis_elem, h_vector)
                                for basis_elem in basis]
                               )
-        return h_vector_sqnorm ** 2 - np.linalg.norm(inner_prod) ** 2
+        return h_vector_norm ** 2 - np.linalg.norm(inner_prod) ** 2
 
     def project_on_basis(self, h, basis):
         """Project a function h onto the basis functions"""

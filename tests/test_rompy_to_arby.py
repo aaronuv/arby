@@ -15,7 +15,7 @@ class TestBesselExample(unittest.TestCase):
         physical_inteval = np.linspace(0, 1, npoints)
         # build reduced basis
         rb_bessel = arby.ReducedOrderModeling(
-            self.training, physical_inteval, greedy_tol=1e-12
+            self.training, physical_inteval, greedy_tol=1e-14
         )
         # compare
         self.assertTrue(np.allclose(rb_bessel.basis, self.basis,
