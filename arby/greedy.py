@@ -149,6 +149,8 @@ class ReducedOrderModeling:
     greedy_tol: float, optional
         The greedy tolerance as a stopping condition for the reduced basis
         greedy algorithm. Default = 1e-12.
+    poly_deg: int, optional
+        Degree of the polynomials used to build splines.
     """
     training_space = None
     """Training functions (numpy.array)."""
@@ -171,7 +173,8 @@ class ReducedOrderModeling:
                  parameter_interval=None,
                  basis=None,
                  integration_rule="riemann",
-                 greedy_tol=1e-12):
+                 greedy_tol=1e-12,
+                 poly_deg=3):
         # Check non empty inputs with the aim of build a reduced order model
         if training_space is not None and physical_interval is not None:
             self.training_space = np.asarray(training_space)
@@ -199,9 +202,19 @@ class ReducedOrderModeling:
                                            num=self.Nsamples,
                                            rule=integration_rule
                                            )
-        self.greedy_tol = greedy_tol
+        self._greedy_tol = greedy_tol
+        self._poly_deg = poly_deg
         self._logger = logging.getLogger()
         self._basis = basis
+        self._spline_model = None
+
+    @property
+    def greedy_tol(self):
+        return self._greedy_tol
+
+    @property
+    def poly_deg(self):
+        return self._poly_deg
 
     # ==== Reduced Basis Method ===============================================
 
@@ -239,7 +252,7 @@ class ReducedOrderModeling:
             self.Nbasis = self._basis.shape[0]
             return self._basis
 
-        self._loss = self.projection_error  # no me convence este atributo
+        self._loss = self.projection_error
 
         # If seed gives a null function, iterate to a new seed
         index_seed = 0
@@ -371,41 +384,16 @@ class ReducedOrderModeling:
 
     # ==== Surrogate Methods ==================================================
 
-    def build_splines(self, poly_deg=3):
-        """Build the surrogate model.
-
-        Calling the basis property and build_eim methods, it builds a complete
-        surrogate model for the parameter and physical domains.
-
-        Parameters
-        ----------
-        poly_deg: int, optional
-            Degree of the polynomials used for building splines.
-
-        See Also
-        --------
-        surrogate
-        """
-        self.build_eim()
-
-        training_compressed = np.empty(
-            (self.Ntrain, self.basis.size), dtype=self.training_space.dtype
-        )
-        for i in range(self.Ntrain):
-            for j, node in enumerate(self.eim_nodes):
-                training_compressed[i, j] = self.training_space[i, node]
-        h_in_nodes_splined = []
-        for i in range(self.Nbasis):
-            h_in_nodes_splined.append(
-                splrep(self.parameter_interval,
-                       training_compressed[:, i],
-                       k=poly_deg)
-                )
-
-        self._spline_model = h_in_nodes_splined
-
     def surrogate(self, param):
-        """Surrogate evaluation at a given parameter.
+        """Evaluates the surrogate model at a given parameter.
+
+        Invokes the basis property and build_eim methods to build a complete
+        surrogate model valid in the entire parameter domain. This is done only
+        once, at the first function call. For subsequent calls, the method
+        invokes the spline model built at the first call and evaluates. The
+        input could be a single parameter point or set of parameters. The
+        output is an array storing the surrogate function/s at that/those
+        parameter/s with the lenght of the original physical interval sampling.
 
         Parameters
         ----------
@@ -417,9 +405,29 @@ class ReducedOrderModeling:
         h_surrogate: numpy.array
             The evaluated surrogate function.
         """
+        if self._spline_model is None:
+            self.build_eim()
+
+            training_compressed = np.empty((self.Ntrain, self.basis.size),
+                                           dtype=self.training_space.dtype
+                                           )
+
+            for i in range(self.Ntrain):
+                for j, node in enumerate(self.eim_nodes):
+                    training_compressed[i, j] = self.training_space[i, node]
+
+            h_in_nodes_splined = []
+            for i in range(self.Nbasis):
+                h_in_nodes_splined.append(
+                    splrep(self.parameter_interval,
+                           training_compressed[:, i],
+                           k=self.poly_deg)
+                    )
+
+            self._spline_model = h_in_nodes_splined
+
         h_surr_at_nodes = np.array(
-            [splev(param, spline) for spline in self._spline_model]
-        )
+            [splev(param, spline) for spline in self._spline_model])
         h_surrogate = self.interpolant @ h_surr_at_nodes
 
         return h_surrogate
