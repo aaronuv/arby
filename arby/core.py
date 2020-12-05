@@ -137,7 +137,7 @@ class ReducedOrderModeling:
     >>> from arby import ReducedOrderModeling as rom
 
     Input the three most important parameters.
-    
+
     >>> model = rom(training_space, physical_interval, parameter_interval)
 
     Build and evaluate the surrogate model. The building stage is done once and

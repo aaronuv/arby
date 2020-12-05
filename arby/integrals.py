@@ -73,7 +73,6 @@ class Quadratures:
         nodes = interval
         return [nodes, (b - a) / (n - 1) * weights]
 
-
     def _trapezoidal(self, interval):
         """ Uniform trapezoidal quadrature."""
 

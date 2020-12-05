@@ -38,5 +38,15 @@ class TestIntegrals(unittest.TestCase):
             interval = np.linspace(0, 1, 101)
             rule = "fake_rule"
             arby.integrals.Integration(interval=interval, rule=rule)
+    def test_Integration_trapezoidal(self):
+        num=101
+        interval = np.linspace(1,5,num=num)
+        function = np.array([5]*num)
+        integration = arby.Integration(interval=interval, rule="trapezoidal")
+        computed_area_under_curve = integration.integral(function)
+        exact_area_under_curve = 20
+        self.assertTrue(np.allclose(computed_area_under_curve,
+                                    exact_area_under_curve,
+	                                rtol=1e-5, atol=1e-8))
 if __name__ == "__main__":
     unittest.main()
