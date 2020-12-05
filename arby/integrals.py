@@ -17,18 +17,8 @@ import numpy as np
 ###################
 
 
-def _rate_to_num(a, b, rate):
-    """Convert sample rate to sample numbers in [a,b]."""
-    return np.floor(np.float(b - a) * rate) + 1
-
-
-def _incr_to_num(a, b, incr):
-    """Convert increment to sample numbers in [a,b]."""
-    return _rate_to_num(a, b, 1.0 / incr)
-
-
-def _nodes_weights(interval=None, num=None, rule=None):
-    """Wrapper to make nodes and weights for integration classes"""
+def _nodes_weights(interval=None, rule=None):
+    """Build nodes and weights."""
 
     # Validate inputs
     if interval is None:
@@ -38,8 +28,7 @@ def _nodes_weights(interval=None, num=None, rule=None):
 
     # Generate requested quadrature rule
     if rule in ["riemann", "trapezoidal"]:
-        all_nodes, all_weights = QuadratureRules()[rule](
-            interval, num=num)
+        all_nodes, all_weights = Quadratures()[rule](interval)
     else:
         raise ValueError(f"Requested quadrature rule ({rule}) not available.")
     return all_nodes, all_weights, rule
@@ -50,94 +39,75 @@ def _nodes_weights(interval=None, num=None, rule=None):
 ##############################
 
 
-class QuadratureRules:
-    """Class for generating quadrature rules"""
+class Quadratures:
+    """Quadrature rules class."""
 
     def __init__(self):
-        self._dict = {"riemann": self.riemann, "trapezoidal": self.trapezoidal}
-        self.rules = list(self._dict.keys())
+        self._dict = {"riemann": self._riemann,
+                      "trapezoidal": self._trapezoidal}
 
     def __getitem__(self, rule):
         return self._dict[rule]
 
-    def riemann(self, interval, num=None):
-        """
-        Uniformly sampled array using Riemann quadrature rule over interval
-        [a,b] with given sample number, sample rate or increment between
-        samples.
+    def _riemann(self, interval):
+        """Uniform Riemann quadrature.
 
         Parameters
         ----------
-        interval -- list indicating interval(s) for quadrature
+        interval: numpy.array
+            The set of points on which define the quadrature.
 
-        Options (specify only one)
-        -------
-        num  -- number(s) of quadrature points
-        rate -- rate(s) at which points are sampled
-        incr -- spacing(s) between samples
-
-        Output
+        Returns
         ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
+        nodes: numpy.array
+            Quadrature nodes.
+        weights: numpy.array
+            Quadrature weights.
         """
 
-        nodes = np.linspace(a, b, num=n)
+        n = interval.shape[0]
+        a = interval.min()
+        b = interval.max()
         weights = np.ones(n, dtype="double")
-        weights[-1] = 0.0
+        weights[-1] = 0.
+        nodes = interval
         return [nodes, (b - a) / (n - 1) * weights]
 
-        return _make_rules(interval, rule_dict, num=num)
 
-    def _riemann_num(self, a, b, n):
-        """
-        Uniformly sampled array using Riemann quadrature rule
-        over given interval with given number of samples
+    def _trapezoidal(self, interval):
+        """ Uniform trapezoidal quadrature."""
 
-        Input
-        -----
-        a -- start of interval
-        b -- end of interval
-        n -- number of quadrature points
-
-        Output
-        ------
-        nodes   -- quadrature nodes
-        weights -- quadrature weights
-        """
-
-
-    def trapezoidal(self, interval, num=None, rate=None, incr=None):
-        """ Trapezoidal rule."""
-
-        rule_dict = {"num": self._trapezoidal_num}
-        return _make_rules(interval, rule_dict, num=num, rate=rate, incr=incr)
-
-    def _trapezoidal_num(self, a, b, n):
-        nodes = np.linspace(a, b, num=n)
+        n = interval.shape[0]
+        a = interval.min()
+        b = interval.max()
         weights = np.ones(n, dtype="double")
         weights[0] = 0.5
         weights[-1] = 0.5
+        nodes = interval
         return [nodes, (b - a) / (n - 1) * weights]
 
 
-
 class Integration:
-    """Integrals for computing inner products and norms of functions"""
+    """Comprise an integration scheme.
 
-    def __init__(
-        self,
-        interval=None,
-        num=None,
-        rate=None,
-        incr=None,
-        rule="riemann",
-        nodes=None,
-        weights=None,
-    ):
+    Parameters
+    ----------
+    interval: numpy.array
+        Set of points to be used for integrals.
+    rule: str, optional
+        Quadrature rule.
 
-        self.nodes, self.weights, self.rule = _nodes_weights(interval, num,
-                                                             rule)
+    Methods
+    -------
+    integral
+    dot
+    norm
+    normalize
+    """
+
+    def __init__(self, interval, rule="riemann"):
+
+        self.nodes, self.weights, self.rule = _nodes_weights(interval, rule)
 
         self.integrals = ["integral", "dot", "norm", "normalize"]
 

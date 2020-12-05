@@ -24,7 +24,8 @@ class TestArby(unittest.TestCase):
     def test_GramSchmidt(self):
         expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
         nbasis, npoints = expected_basis.shape
-        integration = arby.Integration([0, 1], num=npoints, rule="riemann")
+        x = np.linspace(0, 1, 101)
+        integration = arby.Integration(interval=x, rule="riemann")
         computed_basis = arby.gram_schmidt(expected_basis, integration)
         self.assertTrue(
             np.allclose(computed_basis, expected_basis, rtol=1e-5, atol=1e-8)
@@ -33,18 +34,9 @@ class TestArby(unittest.TestCase):
 
 class TestIntegrals(unittest.TestCase):
     def test_Integration_inputs(self):
-
-        with self.assertRaises(TypeError):
-            rule_test = 1.0
-            npoints = 101
-            arby.integrals.Integration([0, 1], num=npoints, rule=rule_test)
         with self.assertRaises(ValueError):
-            arby.integrals.Integration([0, 1], rule="riemann")
-        with self.assertRaises(ValueError):
-            npoints = 101
+            interval = np.linspace(0, 1, 101)
             rule = "fake_rule"
-            arby.integrals.Integration([0, 1], num=npoints, rule=rule)
-
-
+            arby.integrals.Integration(interval=interval, rule=rule)
 if __name__ == "__main__":
     unittest.main()

@@ -21,7 +21,7 @@ def gram_schmidt(functions, integration, max_iter=3):
 
     This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
     algorithm to build an orthonormal basis from a set of functions
-    described in Hoffmann (1989).
+    described in _[1].
 
     Parameters
     ----------
@@ -29,7 +29,7 @@ def gram_schmidt(functions, integration, max_iter=3):
         Functions to be orthonormalized, where m is the number of functions
         and L is the sample length.
     integration : arby.integrals.Integration
-        Instance of the Integration class.
+        Instance of the `Integration` class.
     max_iter : int, optional
         Maximum number of interations. Default = 3.
 
@@ -45,8 +45,9 @@ def gram_schmidt(functions, integration, max_iter=3):
 
     Notes
     -----
-    Hoffmann, W. Iterative algorithms for Gram-Schmidt orthogonalization.
-    Computing 41, 335–348 (1989). https://doi.org/10.1007/BF02241222
+    .. [1] Hoffmann, W. Iterative algorithms for Gram-Schmidt
+    orthogonalization. Computing 41, 335–348 (1989).
+    https://doi.org/10.1007/BF02241222
     """
     functions = np.asarray(functions)
 
@@ -107,8 +108,8 @@ class ReducedOrderModeling:
     empirical interpolants and predictive models from a pre-computed training
     space of functions. The underlying model g(v,x) describing the training
     space is a real or complex function parameterized by v called the
-    "training" parameter. The dual variable x, called the "physical" variable,
-    belongs to the domain in which it is defined an inner product.
+    ``training`` parameter. The dual variable x, called the ``physical``
+    variable, belongs to the domain in which it is defined an inner product.
 
     Parameters
     ----------
@@ -119,7 +120,8 @@ class ReducedOrderModeling:
     parameter_interval : array_like, optional
         Array of parameter points. Default = None.
     basis : array_like, optional
-        Reduced basis for the Reduced Order Model.
+        Orthonormal basis. It can be specified by the user or built with the
+        `basis` property method.
     integration_rule : str, optional
         The quadrature rule to define an integration scheme. Default = Riemann.
     greedy_tol : float, optional
@@ -127,6 +129,27 @@ class ReducedOrderModeling:
         greedy algorithm. Default = 1e-12.
     poly_deg: int, optional
         Degree of the polynomials used to build splines.
+
+    Examples
+    --------
+    **Build a surrogate model**
+
+    >>> from arby import ReducedOrderModeling as rom
+
+    Input the three most important parameters.
+    
+    >>> model = rom(training_space, physical_interval, parameter_interval)
+
+    Build and evaluate the surrogate model. The building stage is done once and
+    for all. It could take some time. For this reason this stage is called the
+    ``offline`` stage. The subsequent calls will invoke the built surrogate
+    spline model and then evaluate. This is called the ``online`` stage.
+
+    >>> model.surrogate(parameter)
+
+    To improve the accuracy of the model without the addition of more training
+    functions, you can tune the class parameters `greedy_tol` and `poly_deg` to
+    control the precision of the reduced basis or the spline model.
     """
     training_space = None
     """Training functions (numpy.ndarray)."""
@@ -139,7 +162,7 @@ class ReducedOrderModeling:
     parameter_interval = None
     """Parameter points (numpy.ndarray)."""
     integration = None
-    """Instance of the Integration class (arby.integrals.Integration)."""
+    """Instance of the `Integration` class (arby.integrals.Integration)."""
     greedy_tol = 1e-12
     """The greedy tolerance (float)."""
 
@@ -172,16 +195,15 @@ class ReducedOrderModeling:
                         "equal to number of parameter points."
                     )
 
-            phys_min = self.physical_interval.min()
-            phys_max = self.physical_interval.max()
-            self.integration = Integration(interval=[phys_min, phys_max],
-                                           num=self.Nsamples,
+            self.integration = Integration(interval=self.physical_interval,
                                            rule=integration_rule
                                            )
         self._greedy_tol = greedy_tol
         self._poly_deg = poly_deg
         self._basis = basis
+        # Initialize spline model for later surrogate calls
         self._spline_model = None
+        # Set debbuging variable. Don't have actual implementations
         self._logger = logging.getLogger()
 
     @property
@@ -199,9 +221,9 @@ class ReducedOrderModeling:
         """Array of basis elements.
 
         If not None, sets a user-specified basis. If None, it implements the
-        Reduced Basis greedy algorithm [1] to build an orthonormal basis from
-        training data that reproduces the training functions within a tolerance
-        specified by the user.
+        Reduced Basis greedy algorithm _[1] to build an orthonormal basis from
+        training data. This basis reproduces the training functions by means of
+        projection within a tolerance specified by the user.
 
         Returns
         -------
@@ -214,19 +236,18 @@ class ReducedOrderModeling:
             Number of basis elements.
         greedy_indices : list(int)
             Set of indices corresponding to greedy points.
-        proj_matrix : numpy.ndarray, shape (Nbasis,Ntrain)
-            Stores the projection coefficients built in the greedy reduced
-            basis Greedy algorithm.
+        proj_matrix : numpy.ndarray, shape=(`Nbasis`,`Ntrain`)
+            Stores projection coefficients of training functions on a basis.
 
         Raises
         ------
         ValueError
-            If Nsamples does not coincide with weights of the quadrature rule.
+            If `Nsamples` doesn't coincide with weights of the quadrature rule.
 
         Notes
         -----
-        [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye, and
-        Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
+        .. [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
+        and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
         Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
         """
 
@@ -237,7 +258,7 @@ class ReducedOrderModeling:
 
         self._loss = self._projection_error
 
-        # If seed gives a null function, iterate to a new seed
+        # If seed gives a null function, choose a random seed
         index_seed = 0
         seed_function = self.training_space[index_seed]
         zero_function = np.zeros_like(seed_function)
@@ -315,15 +336,15 @@ class ReducedOrderModeling:
     def build_eim(self):
         """Find EIM nodes and build Empirical Interpolant matrix.
 
-        Implements the Empirical Interpolation Method [1] to select a set of
+        Implement the Empirical Interpolation Method _[1] to select a set of
         interpolation nodes from the physical interval and build an interpolant
         matrix.
 
         Created Attributes
         ------------------
-        v_matrix : numpy.ndarray, shape=(Nbasis, Nbasis)
+        v_matrix : numpy.ndarray, shape=(`Nbasis`, `Nbasis`)
             The Vandermonde matrix associated to the basis.
-        interpolant : numpy.ndarray, shape=(Nsamples, Nbasis)
+        interpolant : numpy.ndarray, shape=(`Nsamples`, `Nbasis`)
             Interpolant matrix.
         eim_nodes : list(int)
             List of interpolation nodes.
@@ -335,8 +356,8 @@ class ReducedOrderModeling:
 
         Notes
         -----
-        [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye, and
-        Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
+        .. [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
+        and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
         Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
         """
 
@@ -373,7 +394,7 @@ class ReducedOrderModeling:
     def surrogate(self, param):
         """Evaluates the surrogate model at a given parameter.
 
-        Invokes the basis property and build_eim methods to build a complete
+        Invoke the basis property and build_eim methods to build a complete
         surrogate model valid in the entire parameter domain. This is done only
         once, at the first function call. For subsequent calls, the method
         invokes the spline model built at the first call and evaluates. The
@@ -425,15 +446,15 @@ class ReducedOrderModeling:
 
         Parameters
         ----------
-        proj_matrix : numpy.ndarray, shape=(n,Ntrain)
+        proj_matrix : numpy.ndarray, shape=(n,`Ntrain`)
             Stores the projection coefficients of the training functions. n
-            is the number of basis elements of the actual reduced space.
-        norms : numpy.ndarray, shape=(Ntrain)
+            is the number of basis elements.
+        norms : numpy.ndarray, shape=(`Ntrain`)
             Stores the norms of the training functions.
 
         Returns
         -------
-        proj_errors : numpy.ndarray, shape=(Ntrain)
+        proj_errors : numpy.ndarray, shape=(`Ntrain`)
             Squared projection errors.
         """
         proj_norms = np.array(
