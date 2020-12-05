@@ -1,13 +1,11 @@
 import unittest
 import arby
 import numpy as np
-
+from scipy.special import jv as BesselJ
 
 class TestArby(unittest.TestCase):
     def test_basis_shape(self):
         "Test correct shape for reduced basis"
-        from scipy.special import jv as BesselJ
-
         npoints = 101
         # Sample parameter nu and physical variable x
         nu = np.linspace(0, 10, num=npoints)
@@ -15,11 +13,29 @@ class TestArby(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu])
         # build reduced basis
-        rb = arby.ReducedOrderModeling(training, x, greedy_tol=1e-12)
+        bessel = arby.ReducedOrderModeling(training, x, greedy_tol=1e-12)
 
         # Assert that basis has correct shape
-        self.assertEqual(rb.basis.ndim, 2)
-        self.assertEqual(rb.basis.shape[1], npoints)
+        self.assertEqual(bessel.basis.ndim, 2)
+        self.assertEqual(bessel.basis.shape[1], npoints)
+        
+    def test_surrogate(self):
+        npoints = 101
+        nu_train = np.linspace(1, 10, num=npoints)
+        nu_validation = np.linspace(1, 10, num=1001)
+        x = np.linspace(0, 1, 1001)
+        # build traning space
+        training = np.array([BesselJ(nn, x) for nn in nu_train])
+        # build reduced basis
+        bessel = arby.ReducedOrderModeling(training_space=training,
+                                           physical_interval=x,
+                                           parameter_interval=nu_train,
+                                           greedy_tol=1e-15)
+        bessel_test = [BesselJ(nn, x) for nn in nu_validation]
+        bessel_surrogate = [bessel.surrogate(nn) for nn in nu_validation]
+        self.assertTrue(
+            np.allclose(bessel_test, bessel_surrogate, rtol=1e-5, atol=1e-5)
+        )
 
     def test_GramSchmidt(self):
         expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
