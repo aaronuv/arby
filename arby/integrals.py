@@ -165,24 +165,21 @@ class Integration:
             interval, num, rate, incr, rule
         )
 
-        self.integrals = ["integral", "dot", "norm", "normalize", "L2"]
+        self.integrals = ["integral", "dot", "norm", "normalize"]
 
     def integral(self, f):
-        """Integral of a function"""
+        """Integral of a function."""
         return np.dot(self.weights, f)
 
     def dot(self, f, g):
-        """Dot product between a function f and an array of functions g"""
+        """Dot product between a function f and an array of functions g."""
         return np.dot(self.weights, (f.conjugate() * g).transpose())
 
     def norm(self, f):
-        """Norm of function"""
-        return np.sqrt(np.dot(self.weights, f.conjugate() * f).real)
+        """Norm of function."""
+        f_euclid = (f.conjugate() * f).transpose().real
+        return np.sqrt(np.dot(self.weights, f_euclid))
 
     def normalize(self, f):
-        """Normalize a function"""
+        """Normalize a function."""
         return f / self.norm(f)
-
-    def L2(self, f):
-        """L-2 norm"""
-        return np.sqrt(np.dot(self.weights, f.conjugate() * f).real)
