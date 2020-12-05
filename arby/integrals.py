@@ -6,37 +6,35 @@
 
 
 """
-Classes and functions for computing inner products of functions
+Classes and functions to define an integration scheme
 """
 
 import numpy as np
 
 
-#########################
-# Some helper functions #
-#########################
+###################
+# Helper functions
+###################
 
 
 def _rate_to_num(a, b, rate):
-    """Convert sample rate to sample numbers in [a,b]"""
+    """Convert sample rate to sample numbers in [a,b]."""
     return np.floor(np.float(b - a) * rate) + 1
 
 
 def _incr_to_num(a, b, incr):
-    """Convert increment to sample numbers in [a,b]"""
+    """Convert increment to sample numbers in [a,b]."""
     return _rate_to_num(a, b, 1.0 / incr)
 
 
 def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
-    """The workhorse for making quadrature rules"""
+    """Build quadrature rules."""
 
     # Validate inputs
     input_dict = {"num": num, "rate": rate, "incr": incr}
 
-    assert type(interval) in [
-        list,
-        np.ndarray,
-    ], "List or array input required."
+    if not type(interval) in [list, np.ndarray]:
+        raise ValueError("List or array input required.")
     len_interval = len(interval)
 
     # Extract and validate the sampling method requested
@@ -49,9 +47,9 @@ def _make_rules(interval, rule_dict, num=None, rate=None, incr=None):
             else:
                 len_arg = 1
                 value = [value]
-    assert (
-        len_arg == len_interval - 1
-    ), "Number of (sub)interval(s) does not equal number of arguments."
+    if len_arg != len_interval - 1:
+        raise ValueError("Number of (sub)interval(s) does not equal number of "
+                         "arguments.")
 
     # Generate nodes and weights for requested sampling
     nodes, weights = [], []
@@ -71,12 +69,13 @@ def _nodes_weights(interval=None, num=None, rate=None, incr=None, rule=None):
     assert interval, "Input to `interval` must not be None."
     values = [num, rate, incr]
     if values.count(None) != 2:
-        raise ValueError("Must give input for only one of num, rate, or incr.")
+        raise ValueError("Must give input for only one of `num`, `rate`, or` "
+                         "`incr`.")
     if type(rule) is not str:
         raise TypeError("Input `rule` must be a string.")
 
     # Generate requested quadrature rule
-    if rule in ["riemann"]:
+    if rule in ["riemann", "trapezoidal"]:
         all_nodes, all_weights = QuadratureRules()[rule](
             interval, num=num, rate=rate, incr=incr
         )
@@ -94,21 +93,23 @@ class QuadratureRules:
     """Class for generating quadrature rules"""
 
     def __init__(self):
-        self._dict = {"riemann": self.riemann}
+        self._dict = {"riemann": self._riemann,
+                      "trapezoidal": self.trapezoidal}
         self.rules = list(self._dict.keys())
 
     def __getitem__(self, rule):
         return self._dict[rule]
 
-    def riemann(self, interval, num=None, rate=None, incr=None):
+    def _riemann(self, interval, num=None, rate=None, incr=None):
         """
-        Uniformly sampled array using Riemann quadrature rule
-        over interval [a,b] with given sample number, sample rate
-        or increment between samples.
+        Uniformly sampled array using Riemann quadrature rule over interval
+        [a,b] with given sample number, sample rate or increment between
+        samples.
 
-        Input
-        -----
-        interval -- list indicating interval(s) for quadrature
+        Parameters
+        ----------
+        interval: list
+            Indicating interval for quadrature.
 
         Options (specify only one)
         -------
@@ -116,7 +117,7 @@ class QuadratureRules:
         rate -- rate(s) at which points are sampled
         incr -- spacing(s) between samples
 
-        Output
+        Returns
         ------
         nodes   -- quadrature nodes
         weights -- quadrature weights
@@ -144,7 +145,21 @@ class QuadratureRules:
         nodes = np.linspace(a, b, num=n)
         weights = np.ones(n, dtype="double")
         weights[-1] = 0.0
-        return [nodes, (b - a) / (n - 1.0) * weights]
+        return [nodes, (b - a) / (n - 1) * weights]
+
+    def trapezoidal(self, interval, num=None, rate=None, incr=None):
+        """ Trapezoidal rule."""
+
+        rule_dict = {"num": self._trapezoidal_num}
+        return _make_rules(interval, rule_dict, num=num, rate=rate, incr=incr)
+
+    def _trapezoidal_num(self, a, b, n):
+        nodes = np.linspace(a, b, num=n)
+        weights = np.ones(n, dtype="double")
+        weights[0] = 0.5
+        weights[-1] = 0.5
+        return [nodes, (b - a) / (n - 1) * weights]
+
 
 
 class Integration:
