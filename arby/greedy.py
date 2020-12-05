@@ -17,58 +17,62 @@ from scipy.interpolate import splrep, splev
 
 
 def gs_one_element(h, basis, integration, a=0.5, max_iter=3):
-    """ Orthonormilize a function against an orthonormal basis.
+    """Orthonormalize a function against an orthonormal basis.
+
+    This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
+    algorithm to build an orthonormal basis from a set of functions
+    described in Hoffmann (1989).
 
     Parameters
     ----------
-        h : array_like, shape=(L, 1)
-            Function to be orthonormalized, where L is the sample number.
-        basis: array_like, shape=(n, L)
-            Orthonormal basis functions, where n is the number of basis
-            elements.
-        integration: arby.integrals.Integration
-            Instance of the Integration class.
-        a : float, optional
-            Detention parameter. Default = 0.5.
-        max_iter: int, optional
-            Maximum number of interations. Default = 3.
+    h : array_like, shape=(L, 1)
+        Function to be orthonormalized, where L is the sample number.
+    basis : array_like, shape=(n, L)
+        Orthonormal basis functions, where n is the number of basis
+        elements.
+    integration : arby.integrals.Integration
+        Instance of the Integration class.
+    a : float, optional
+        Detention parameter. Default = 0.5.
+    max_iter : int, optional
+        Maximum number of interations. Default = 3.
 
     Returns
     -------
-        A list with the orthonormalized function and its norm.
+    tuple
+        The orthonormalized function and its norm.
 
     Raises
     ------
-        StopIteration
-            If max number of iterations in GS algorithm is reached.
+    StopIteration
+        If max number of iterations in GS algorithm is reached.
 
     Notes
     -----
-        This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
-        algorithm to build an orthonormal basis from a set of functions
-        described in Hoffmann, W. Iterative algorithms for Gram-Schmidt
-        orthogonalization. Computing 41, 335–348 (1989).
-        https://doi.org/10.1007/BF02241222
+    Hoffmann, W. Iterative algorithms for Gram-Schmidt orthogonalization.
+    Computing 41, 335–348 (1989).
+    https://doi.org/10.1007/BF02241222
     """
     norm = integration.norm(h)
     e = h / norm
 
-    flag, ctr = 0, 1
-    while flag == 0:
+    n_iters = 0
+    continue_loop = True
+    while continue_loop:
         for b in basis:
             e -= b * integration.dot(b, e)
         new_norm = integration.norm(e)
         if new_norm / norm <= a:
             norm = new_norm
-            ctr += 1
-            if ctr > max_iter:
+            n_iters += 1
+            if n_iters > max_iter:
                 raise StopIteration("Gram-Schmidt algorithm: max number of "
-                                    "iterations reached."
+                                    "iterations reached ({}).".format(max_iter)
                                     )
         else:
-            flag = 1
+            continue_loop = False
 
-    return [e / new_norm, new_norm]
+    return e / new_norm, new_norm
 
 
 def gram_schmidt(functions, integration, a=0.5, max_iter=3):
@@ -76,20 +80,20 @@ def gram_schmidt(functions, integration, a=0.5, max_iter=3):
 
     Parameters
     ----------
-        functions: array_like, shape=(m, L)
-            Functions to be orthonormalized, where m is the number of functions
-            and L is the sample number.
-        integration: arby.integrals.Integration
-            Instance of the Integration class.
-        a : float, optional
-            Detention parameter. Default = 0.5.
-        max_iter: int, optional
-            Maximum number of interations. Default = 3.
+    functions : array_like, shape=(m, L)
+        Functions to be orthonormalized, where m is the number of functions
+        and L is the sample length.
+    integration : arby.integrals.Integration
+        Instance of the Integration class.
+    a : float, optional
+        Stop parameter. Default = 0.5.
+    max_iter : int, optional
+        Maximum number of interations. Default = 3.
 
     Returns
     -------
-        basis: numpy.array
-            Orthonormalized array.
+    basis : numpy.ndarray
+        Orthonormalized array.
 
     Raises
     ------
@@ -135,33 +139,32 @@ class ReducedOrderModeling:
 
     Parameters
     ----------
-    training_space: array_like, optional
+    training_space : array_like, optional
         Array of training functions. Default = None.
-    physical_interval: array_like, optional
+    physical_interval : array_like, optional
         Array of physical points. Default = None.
-    parameter_interval: array_like, optional
+    parameter_interval : array_like, optional
         Array of parameter points. Default = None.
-    basis: array_like, optional
-        If None (default), reduced basis built from training data. If not None,
-        any user specified basis.
-    integration_rule: str, optional
-        The cuadrature rule to define an integration scheme. Default = Riemann.
-    greedy_tol: float, optional
+    basis : array_like, optional
+        Reduced basis for the Reduced Order Model.
+    integration_rule : str, optional
+        The quadrature rule to define an integration scheme. Default = Riemann.
+    greedy_tol : float, optional
         The greedy tolerance as a stopping condition for the reduced basis
         greedy algorithm. Default = 1e-12.
     poly_deg: int, optional
         Degree of the polynomials used to build splines.
     """
     training_space = None
-    """Training functions (numpy.array)."""
+    """Training functions (numpy.ndarray)."""
     Ntrain = None
-    """Number training functions or parameter points (int)."""
+    """Number of training functions or parameter points (int)."""
     Nsamples = None
     """Number of sample or physical points (int)."""
     physical_interval = None
-    """Sample points (numpy.array)."""
+    """Sample points (numpy.ndarray)."""
     parameter_interval = None
-    """Parameter points (numpy.array)."""
+    """Parameter points (numpy.ndarray)."""
     integration = None
     """Instance of the Integration class (arby.integrals.Integration)."""
     greedy_tol = 1e-12
@@ -220,31 +223,27 @@ class ReducedOrderModeling:
 
     @property
     def basis(self):
-        """Array of basis elements.
-
-        If not None, it returns a user-specified basis. If None, this property
-        method builds a reduced basis from a given training space of functions.
-
-        All instantiation parameters are specified in the class constructor.
+        """Array of basis elements for the Reduced Order Model.
 
         Returns
         -------
-        basis: numpy.array
+        basis : numpy.ndarray
+            The reduced basis of the Reduced Order Model.
 
         Created Attributes
         ------------------
-        Nbasis: int
+        Nbasis : int
             Number of basis elements.
-        greedy_indices: list(int)
+        greedy_indices : list(int)
             Set of indices corresponding to greedy points.
-        proj_matrix: numpy.array, shape (Nbasis,Ntrain)
+        proj_matrix : numpy.ndarray, shape (Nbasis,Ntrain)
             Stores the projection coefficients built in the greedy reduced
-            basis greedy algorithm.
+            basis Greedy algorithm.
 
         Raises
         ------
         ValueError
-            If Nsamples do not coincides with weights of the quadrature rule.
+            If Nsamples does not coincide with weights of the quadrature rule.
         """
 
         if self._basis is not None:
@@ -341,11 +340,11 @@ class ReducedOrderModeling:
 
         Created Attributes
         ------------------
-        v_matrix: numpy.array, shape=(Nbasis, Nbasis)
+        v_matrix : numpy.ndarray, shape=(Nbasis, Nbasis)
             The Vandermonde matrix associated to the basis.
-        interpolant: numpy.array, shape=(Nsamples, Nbasis)
+        interpolant : numpy.ndarray, shape=(Nsamples, Nbasis)
             Interpolant matrix.
-        eim_nodes: list(int)
+        eim_nodes : list(int)
             List of interpolation nodes.
 
         Raises
@@ -397,13 +396,13 @@ class ReducedOrderModeling:
 
         Parameters
         ----------
-        param: float or array_like(float)
+        param : float or array_like(float)
             Point or set of parameters.
 
         Returns
         -------
-        h_surrogate: numpy.array
-            The evaluated surrogate function.
+        h_surrogate : numpy.ndarray
+            The evaluated surrogate function for the given parameters.
         """
         if self._spline_model is None:
             self.build_eim()
@@ -439,15 +438,15 @@ class ReducedOrderModeling:
 
         Parameters
         ----------
-        proj_matrix: numpy.array, shape=(n,Ntrain)
+        proj_matrix : numpy.ndarray, shape=(n,Ntrain)
             Stores the projection coefficients of the training functions. n
             is the number of basis elements of the actual reduced space.
-        norms: numpy.array, shape=(Ntrain)
+        norms : numpy.ndarray, shape=(Ntrain)
             Stores the norms of the training functions.
 
         Returns
         -------
-        proj_errors: numpy.array, shape=(Ntrain)
+        proj_errors : numpy.ndarray, shape=(Ntrain)
             Squared projection errors.
         """
         proj_norms = np.array(
