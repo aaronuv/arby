@@ -121,14 +121,15 @@ class ReducedOrderModeling:
         Array of parameter points. Default = None.
     basis : array_like, optional
         Orthonormal basis. It can be specified by the user or built with the
-        `basis` property method.
+        `basis` property method. Default = None.
     integration_rule : str, optional
-        The quadrature rule to define an integration scheme. Default = Riemann.
+        The quadrature rule to define an integration scheme.
+        Default = "riemann".
     greedy_tol : float, optional
         The greedy tolerance as a stopping condition for the reduced basis
         greedy algorithm. Default = 1e-12.
     poly_deg: int, optional
-        Degree <= 5 of the polynomials used to build splines.
+        Degree <= 5 of the polynomials used to build splines. Default = 3.
 
     Examples
     --------
@@ -472,15 +473,29 @@ class ReducedOrderModeling:
     # ==== Validation methods =================================================
 
     def projection_error(self, h, basis):
-        """Square of the projection error on a basis of a function or set of
-        functions h.
+        """Square of the projection error of a function onto a basis.
+
+        The error is computed in the L2 norm.
+
+        Parameters
+        ----------
+        h: numpy.array
+            Function or set of functions to be projected.
+        basis: numpy.array
+            Orthonormal basis.
+
+        Returns
+        -------
+        l2_error: float or numpy.array
+            Square of the projection error.
         """
         h_norm = self.integration.norm(h).real
         inner_prod = np.array(
                               [self.integration.dot(basis_elem, h)
                                for basis_elem in basis]
                               )
-        return h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
+        l2_error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
+        return l2_error
 
     def project(self, h, basis):
         """Project a function h on a basis."""

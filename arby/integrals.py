@@ -94,7 +94,7 @@ class Integration:
     interval: numpy.array
         Set of points to be used for integrals.
     rule: str, optional
-        Quadrature rule.
+        Quadrature rule. Default = "riemann".
     """
 
     def __init__(self, interval, rule="riemann"):
