@@ -55,6 +55,11 @@ that comprises inner products.
 
         squared_L2_error = bessel_model.integration.norm(bessel_par - BesselJ(par, x))
 
+If we want to improve the surrogate accuracy, we tune the ``greedy_tol`` (Default= ``1e-12``)
+or the ``poly_deg`` (Default= ``3``) class parameters. The first one controls the precission of
+the underlying basis. The second one controls the degree of the interpolation polynomials used to
+build splines that will give us continuity in the parameter space.
+
 Build a reduced basis
 ^^^^^^^^^^^^^^^^^^^^^
 
