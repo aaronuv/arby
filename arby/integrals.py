@@ -95,13 +95,6 @@ class Integration:
         Set of points to be used for integrals.
     rule: str, optional
         Quadrature rule.
-
-    Methods
-    -------
-    integral
-    dot
-    norm
-    normalize
     """
 
     def __init__(self, interval, rule="riemann"):
