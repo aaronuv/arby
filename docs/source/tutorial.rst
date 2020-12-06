@@ -1,7 +1,11 @@
 Tutorial
 ========
 
-**Build a surrogate model for Bessel functions of first kind.**
+Example: Bessel functions of first kind
+---------------------------------------
+
+Build a surrogate model
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Suppose we want to find surrogates functions for solutions of the Bessel
 differential equation with a free parameter :math:`\nu`.
@@ -34,7 +38,9 @@ we will generate the sample data using scipy's Bessel special functions.
         training = np.array([BesselJ(nn, x) for nn in nu])
 
         # create a model
-        bessel_model = ROM(training, x, nu)
+        bessel_model = ROM(training_space=training,
+                           physical_interval=x,
+                           parameter_interval=nu)
 
         # build and evaluate the surrogate at some parameter `par`
         bessel_par = bessel_model.surrogate(par)
@@ -47,17 +53,70 @@ that comprises inner products.
 
 .. code-block:: python
 
-        bessel_model.integration.norm(bessel_par - BesselJ(par, x))
+        squared_L2_error = bessel_model.integration.norm(bessel_par - BesselJ(par, x))
 
-**Build a reduced basis**
+Build a reduced basis
+^^^^^^^^^^^^^^^^^^^^^
 
-Lets go deeper. Reduced Basis _[1] is a reduced order modeling technique to find a
-cuasi-optimal basis capable of span the entire training set by means of projection.
+Lets go deeper. The Reduced Basis Method (RBM) [1]_ is a reduced order modeling technique to find a
+cuasi-optimal basis of functions capable of span the entire training set. This is a projection
+approach, say, we need an inner product to perform projections and construct the approximation.
+
 Suppose we have a training set :math:`\{f_{\lambda_i}\}_{i=1}^N` of parameterized real
 functions. This set may represent a non-linear model, perhaps solution of PDEs. We would
-like, if possible, to reduce the dimensionality/complexity of these set traying to find a
-compact representation of them in terms of linear combinations of basis elements
-:math:`\{e_i\}_{i=1}^n`.
+like, if possible, to reduce the dimensionality/complexity of these set by traying to find a
+compact representation in terms of linear combinations of basis elements
+:math:`\{e_i\}_{i=1}^n`, that is,
 
-To build a reduced basis, you just provide the training set of functions and the discretization of
-the physical variable :math:`x`. The later is to define an integration scheme for inner products.
+.. math::
+
+        f \approx \sum_{i=1}^n c_i e_i\,.
+
+f is an arbitrary training function and the :math:`c_i`'s are the projection coefficients
+:math:`<e_i,f>` computed in some inner product :math:`<\cdot,\cdot>` on the space of functions.
+The RB method choose a set of optimal functions that belongs to the training set to build a
+finite dimensional subspace capable to represent the entire training set up to a prefixed tolerance
+chosen by the user.
+
+To build a reduced basis with Arby, you just provide the training set of functions and the
+discretization of the physical variable :math:`x` to the ``ReducedOrderModeling`` class.
+The later is to define the integration scheme used to compute inner products. For the
+Bessel example,
+
+.. code-block:: python
+
+        bessel_model = ROM(training_space=training,
+                           physical_interval=x, greedy_tol=1e-12)
+
+The ``greedy_tol`` is the accuracy in the :math:`L_2`-norm that our reduced basis is expected
+to achieve. To build the basis, just call it:
+
+.. code-block:: python
+
+        reduced_basis = bessel_model.basis
+
+This builds an orthonormalized basis. We can access to the *greedy points* through
+``bessel_model.greedy_indices``. These indices mark those functions in the training
+set that was selected to span the approximating subspace. For stability reasons,
+they are iteratively orthonormalized in the building stage. The number of basis
+elements ``bessel_model.Nbasis`` represents the dimension of the subspace and is not
+fixed. It changes if we change the greedy tolerance. The lower the tolerance,
+the bigger the number of basis elements needed to reach that accuracy. With Arby,
+we can tune the accuracy of the reduced basis through ``greedy_tol``.
+
+To measure the effectiveness of the reduced basis in approximatting the training
+functions we do
+
+.. code-block:: python
+
+        projected_f = bessel_model.project(f, reduced_basis)
+        squared_L2_error = bessel_model.integration,norm(f - projected_f)
+
+
+
+References
+----------
+
+.. [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
+       and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
+       Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
