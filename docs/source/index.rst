@@ -20,3 +20,4 @@ empirical interpolants and surrogate models from training data.
 
    installation
    tutorial
+   api

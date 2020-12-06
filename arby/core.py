@@ -21,7 +21,7 @@ def gram_schmidt(functions, integration, max_iter=3):
 
     This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
     algorithm to build an orthonormal basis from a set of functions
-    described in _[1].
+    described in [1]_.
 
     Parameters
     ----------
@@ -46,8 +46,8 @@ def gram_schmidt(functions, integration, max_iter=3):
     Notes
     -----
     .. [1] Hoffmann, W. Iterative algorithms for Gram-Schmidt
-    orthogonalization. Computing 41, 335–348 (1989).
-    https://doi.org/10.1007/BF02241222
+      orthogonalization. Computing 41, 335–348 (1989).
+      https://doi.org/10.1007/BF02241222
     """
     functions = np.asarray(functions)
 
@@ -221,7 +221,7 @@ class ReducedOrderModeling:
         """Array of basis elements.
 
         If not None, sets a user-specified basis. If None, it implements the
-        Reduced Basis greedy algorithm _[1] to build an orthonormal basis from
+        Reduced Basis greedy algorithm [2]_ to build an orthonormal basis from
         training data. This basis reproduces the training functions by means of
         projection within a tolerance specified by the user.
 
@@ -230,25 +230,17 @@ class ReducedOrderModeling:
         basis : numpy.ndarray
             The reduced basis of the Reduced Order Model.
 
-        Created Attributes
-        ------------------
-        Nbasis : int
-            Number of basis elements.
-        greedy_indices : list(int)
-            Set of indices corresponding to greedy points.
-        proj_matrix : numpy.ndarray, shape=(`Nbasis`,`Ntrain`)
-            Stores projection coefficients of training functions on a basis.
-
         Raises
         ------
         ValueError
-            If `Nsamples` doesn't coincide with weights of the quadrature rule.
+            If ``Nsamples`` doesn't coincide with weights of the quadrature
+            rule.
 
         Notes
         -----
-        .. [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
-        and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
-        Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
+        .. [2] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
+            and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
+            Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
         """
 
         if self._basis is not None:
@@ -336,18 +328,9 @@ class ReducedOrderModeling:
     def build_eim(self):
         """Find EIM nodes and build Empirical Interpolant matrix.
 
-        Implement the Empirical Interpolation Method _[1] to select a set of
+        Implement the Empirical Interpolation Method [3]_ to select a set of
         interpolation nodes from the physical interval and build an interpolant
         matrix.
-
-        Created Attributes
-        ------------------
-        v_matrix : numpy.ndarray, shape=(`Nbasis`, `Nbasis`)
-            The Vandermonde matrix associated to the basis.
-        interpolant : numpy.ndarray, shape=(`Nsamples`, `Nbasis`)
-            Interpolant matrix.
-        eim_nodes : list(int)
-            List of interpolation nodes.
 
         Raises
         ------
@@ -356,9 +339,9 @@ class ReducedOrderModeling:
 
         Notes
         -----
-        .. [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
-        and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
-        Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
+        .. [3] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
+          and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
+          Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
         """
 
         if self.basis is None:
