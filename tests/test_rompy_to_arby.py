@@ -18,8 +18,8 @@ class TestBesselExample(unittest.TestCase):
             self.training, physical_inteval, greedy_tol=1e-14
         )
         # compare
-        self.assertTrue(np.allclose(rb_bessel.basis, self.basis,
-                                    rtol=1e-5, atol=1e-8))
+        self.assertTrue(np.allclose(rb_bessel.basis, self.basis, rtol=1e-5,
+                                    atol=1e-8))
 
     def test_regression_EIM(self):
         "Test that EIM matches ROMpy's for the same training data"
