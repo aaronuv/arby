@@ -28,7 +28,7 @@ class TestBesselExample(unittest.TestCase):
         )
         # compare
         self.assertTrue(
-            np.allclose(rb_bessel.basis, self.basis, tol=1e-5, atol=1e-8)
+            np.allclose(rb_bessel.basis, self.basis, rtol=1e-5, atol=1e-8)
         )
 
     def test_regression_EIM(self):
