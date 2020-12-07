@@ -2,6 +2,8 @@
 
 <img src="misc/logo.png" alt="logo" width="42%">
 
+[![PyPI version](https://badge.fury.io/py/arby.svg)](https://badge.fury.io/py/arby)
+
 [Model Order Reduction (MOR)](https://en.wikipedia.org/wiki/Model_order_reduction)
 is a technique for reducing the computational complexity of mathematical models in
 numerical simulations.
