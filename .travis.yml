@@ -29,3 +29,7 @@ jobs:
 
         - env: TOXENV=check-manifest
           python: 3.8
+        
+        - env: TOXENV=docstyle
+          python: 3.8
+
