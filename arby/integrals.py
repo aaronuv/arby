@@ -46,7 +46,7 @@ class Quadratures:
         }
 
     def __getitem__(self, rule):
-		"""Get the quadrature rule."""
+        """Get the quadrature rule."""
         return self._dict[rule]
 
     def _riemann(self, interval):
