@@ -4,10 +4,12 @@
 # License: MIT
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
-
 import unittest
+
 import arby
+
 import numpy as np
+
 from scipy.special import jv as BesselJ
 
 
@@ -77,8 +79,10 @@ class TestIntegrals(unittest.TestCase):
         exact_area_under_curve = 20
         self.assertTrue(
             np.allclose(
-                computed_area_under_curve, exact_area_under_curve, rtol=1e-5,
-                atol=1e-8
+                computed_area_under_curve,
+                exact_area_under_curve,
+                rtol=1e-5,
+                atol=1e-8,
             )
         )
 

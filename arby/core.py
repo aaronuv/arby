@@ -5,11 +5,14 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 
-import numpy as np
 import logging
-from .integrals import Integration
 from random import randint  # noqa: F401
-from scipy.interpolate import splrep, splev
+
+import numpy as np
+
+from scipy.interpolate import splev, splrep
+
+from .integrals import Integration
 
 
 # ================

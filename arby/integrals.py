@@ -43,8 +43,10 @@ class Quadratures:
     """Quadrature rules class."""
 
     def __init__(self):
-        self._dict = {"riemann": self._riemann,
-                      "trapezoidal": self._trapezoidal}
+        self._dict = {
+            "riemann": self._riemann,
+            "trapezoidal": self._trapezoidal,
+        }
 
     def __getitem__(self, rule):
         return self._dict[rule]
@@ -69,7 +71,7 @@ class Quadratures:
         a = interval.min()
         b = interval.max()
         weights = np.ones(n, dtype="double")
-        weights[-1] = 0.
+        weights[-1] = 0.0
         nodes = interval
         return [nodes, (b - a) / (n - 1) * weights]
 
