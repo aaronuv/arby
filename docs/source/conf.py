@@ -14,13 +14,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..', '..', 'arby')))
 
-import mock
- 
-MOCK_MODULES = ['numpy', 'scipy', 'scipy.interpolate']
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
-
-
 # -- Project information -----------------------------------------------------
 
 project = 'Arby'
