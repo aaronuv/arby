@@ -13,7 +13,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join('..','..')))
+sys.path.insert(0, os.path.abspath(os.path.join('..', '..')))
 
 
 # -- Project information -----------------------------------------------------
@@ -26,7 +26,7 @@ author = 'Aarón Villanueva'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-# Get the version from astroalign file itself (not imported)
+# Get the version from Arby file itself (not imported)
 with open(os.path.join('..', '..', 'arby', '__init__.py'), 'r') as f:
     for line in f:
         if line.startswith('__version__'):

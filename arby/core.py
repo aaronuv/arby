@@ -26,6 +26,7 @@ _logger = logging.getLogger()
 #      Orthonormalization Function
 # ===================================
 
+
 def gram_schmidt(functions, integration, max_iter=3):
     """Orthonormalize a set of functions.
 
@@ -98,9 +99,10 @@ def _gs_one_element(h, basis, integration, max_iter=3):
             norm = new_norm
             n_iters += 1
             if n_iters > max_iter:
-                raise StopIteration("Gram-Schmidt algorithm: max number of "
-                                    "iterations reached ({}).".format(max_iter)
-                                    )
+                raise StopIteration(
+                    "Gram-Schmidt algorithm: max number of "
+                    "iterations reached ({}).".format(max_iter)
+                )
         else:
             continue_loop = False
 
@@ -110,6 +112,7 @@ def _gs_one_element(h, basis, integration, max_iter=3):
 # =================================
 # Class for Reduced Order Modeling
 # =================================
+
 
 class ReducedOrderModeling:
     """Build reduced order models from training data.
@@ -165,7 +168,7 @@ class ReducedOrderModeling:
         Indices selected by the EIM in `build_eim`.
     interpolant_: numpy.ndarray
         Empirical Interpolation matrix.
-    
+
     Examples
     --------
     **Build a surrogate model**
@@ -188,27 +191,31 @@ class ReducedOrderModeling:
     control the precision of the reduced basis or the spline model.
     """
 
-    def __init__(self,
-                 training_space=None,
-                 physical_interval=None,
-                 parameter_interval=None,
-                 basis=None,
-                 integration_rule="riemann",
-                 greedy_tol=1e-12,
-                 poly_deg=3):
+    def __init__(
+        self,
+        training_space=None,
+        physical_interval=None,
+        parameter_interval=None,
+        basis=None,
+        integration_rule="riemann",
+        greedy_tol=1e-12,
+        poly_deg=3,
+    ):
         # Check non empty inputs with the aim of build a reduced order model
         if training_space is not None and physical_interval is not None:
             self.training_space = np.asarray(training_space)
             self.Ntrain, self.Nsamples = self.training_space.shape
             self.physical_interval = np.asarray(physical_interval)
             if self.Ntrain > self.Nsamples:
-                raise ValueError("Number of samples must be greater than "
-                                 "number of training functions.")
+                raise ValueError(
+                    "Number of samples must be greater than "
+                    "number of training functions."
+                )
             if self.Nsamples != self.physical_interval.size:
                 raise ValueError(
                     "Number of samples for each training function must be "
                     "equal to number of physical points."
-                                    )
+                )
             if parameter_interval is not None:
                 self.parameter_interval = np.asarray(parameter_interval)
                 if self.Ntrain != self.parameter_interval.size:
@@ -217,9 +224,9 @@ class ReducedOrderModeling:
                         "equal to number of parameter points."
                     )
 
-            self.integration = Integration(interval=self.physical_interval,
-                                           rule=integration_rule
-                                           )
+            self.integration = Integration(
+                interval=self.physical_interval, rule=integration_rule
+            )
         self.greedy_tol = greedy_tol
         self.poly_deg = poly_deg
         self._basis = basis
@@ -274,8 +281,9 @@ class ReducedOrderModeling:
 
         # Validate inputs
         if self.Nsamples != np.size(self.integration.weights):
-            raise ValueError("Number of samples is inconsistent "
-                             "with quadrature rule.")
+            raise ValueError(
+                "Number of samples is inconsistent " "with quadrature rule."
+            )
 
         # Allocate memory for greedy algorithm arrays
         self._allocate(
@@ -309,7 +317,7 @@ class ReducedOrderModeling:
             if next_index in self.greedy_indices_:
                 # Prune excess allocated entries
                 self._prune(nn)
-                self._basis = self._basis[: nn]
+                self._basis = self._basis[:nn]
                 self.Nbasis_ = nn
                 return self._basis
 
@@ -317,12 +325,12 @@ class ReducedOrderModeling:
             self._basis[nn], self._basisnorms[nn] = _gs_one_element(
                 self.training_space[self.greedy_indices_[nn]],
                 self._basis[:nn],
-                self.integration
+                self.integration,
             )
             self._proj_matrix[nn] = self.integration.dot(
                 self._basis[nn], self.training_space
             )
-            errs = self._loss(self._proj_matrix[:nn + 1], norms=self._norms)
+            errs = self._loss(self._proj_matrix[: nn + 1], norms=self._norms)
             next_index = np.argmax(errs)
             self.greedy_errors[nn] = errs[next_index]
 
@@ -331,7 +339,7 @@ class ReducedOrderModeling:
             _logger.debug(nn, "\t", sigma)
         # Prune excess allocated entries
         self._prune(nn + 1)
-        self._basis = self._basis[:nn + 1]
+        self._basis = self._basis[: nn + 1]
         self.Nbasis_ = nn + 1
         return self._basis
 
@@ -408,9 +416,9 @@ class ReducedOrderModeling:
         if self._spline_model is None:
             self.build_eim()
 
-            training_compressed = np.empty((self.Ntrain, self.basis.size),
-                                           dtype=self.training_space.dtype
-                                           )
+            training_compressed = np.empty(
+                (self.Ntrain, self.basis.size), dtype=self.training_space.dtype
+            )
 
             for i in range(self.Ntrain):
                 for j, node in enumerate(self.eim_nodes_):
@@ -419,15 +427,18 @@ class ReducedOrderModeling:
             h_in_nodes_splined = []
             for i in range(self.Nbasis_):
                 h_in_nodes_splined.append(
-                    splrep(self.parameter_interval,
-                           training_compressed[:, i],
-                           k=self.poly_deg)
+                    splrep(
+                        self.parameter_interval,
+                        training_compressed[:, i],
+                        k=self.poly_deg,
                     )
+                )
 
             self._spline_model = h_in_nodes_splined
 
         h_surr_at_nodes = np.array(
-            [splev(param, spline) for spline in self._spline_model])
+            [splev(param, spline) for spline in self._spline_model]
+        )
         h_surrogate = self.interpolant_ @ h_surr_at_nodes
 
         return h_surrogate
@@ -503,9 +514,8 @@ class ReducedOrderModeling:
         """
         h_norm = self.integration.norm(h).real
         inner_prod = np.array(
-                              [self.integration.dot(basis_elem, h)
-                               for basis_elem in basis]
-                              )
+            [self.integration.dot(basis_elem, h) for basis_elem in basis]
+        )
         l2_error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
         return l2_error
 
