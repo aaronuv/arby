@@ -5,9 +5,7 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 
-"""
-Classes and functions to define an integration scheme
-"""
+"""Classes and functions to define an integration scheme."""
 
 import numpy as np
 
@@ -19,7 +17,6 @@ import numpy as np
 
 def _nodes_weights(interval=None, rule=None):
     """Build nodes and weights."""
-
     # Validate inputs
     if interval is None:
         raise ValueError("`interval` must be provided.")
@@ -49,6 +46,7 @@ class Quadratures:
         }
 
     def __getitem__(self, rule):
+		"""Get the quadrature rule."""
         return self._dict[rule]
 
     def _riemann(self, interval):
@@ -60,13 +58,13 @@ class Quadratures:
             The set of points on which define the quadrature.
 
         Returns
-        ------
+        -------
         nodes: numpy.ndarray
             Quadrature nodes.
         weights: numpy.ndarray
             Quadrature weights.
-        """
 
+        """
         n = interval.shape[0]
         a = interval.min()
         b = interval.max()
@@ -76,8 +74,7 @@ class Quadratures:
         return [nodes, (b - a) / (n - 1) * weights]
 
     def _trapezoidal(self, interval):
-        """ Uniform trapezoidal quadrature."""
-
+        """Uniform trapezoidal quadrature."""
         n = interval.shape[0]
         a = interval.min()
         b = interval.max()
@@ -97,6 +94,7 @@ class Integration:
         Set of points to be used for integrals.
     rule: str, optional
         Quadrature rule. Default = "riemann".
+
     """
 
     def __init__(self, interval, rule="riemann"):

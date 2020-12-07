@@ -10,7 +10,7 @@
 # ==========================
 
 
-"""This file is for distribute and install Arby"""
+"""Distribute and install Arby."""
 
 
 # ==========================

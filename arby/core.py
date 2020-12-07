@@ -4,6 +4,7 @@
 # License: MIT
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
+"""ROM class and Gram-schmidt function."""
 
 import logging
 from random import randint  # noqa: F401
@@ -62,6 +63,7 @@ def gram_schmidt(functions, integration, max_iter=3):
     .. [1] Hoffmann, W. Iterative algorithms for Gram-Schmidt
       orthogonalization. Computing 41, 335–348 (1989).
       https://doi.org/10.1007/BF02241222
+
     """
     functions = np.asarray(functions)
 
@@ -263,8 +265,8 @@ class ReducedOrderModeling:
         .. [2] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
             and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
             Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
-        """
 
+        """
         if self._basis is not None:
             self._basis = np.asarray(self._basis)
             self.Nbasis_ = self._basis.shape[0]
@@ -365,8 +367,8 @@ class ReducedOrderModeling:
         .. [3] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
           and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
           Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
-        """
 
+        """
         if self.basis is None:
             raise ValueError("There is no basis to work with.")
 
@@ -397,7 +399,7 @@ class ReducedOrderModeling:
     # ==== Surrogate Method ===================================================
 
     def surrogate(self, param):
-        """Evaluates the surrogate model at a given parameter.
+        """Evaluate the surrogate model at a given parameter.
 
         Build a complete surrogate model valid in the entire parameter domain.
         This is done only once, at the first function call. For subsequent
@@ -415,6 +417,7 @@ class ReducedOrderModeling:
         -------
         h_surrogate : numpy.ndarray
             The evaluated surrogate function for the given parameters.
+
         """
         if self._spline_model is None:
             self.build_eim()
