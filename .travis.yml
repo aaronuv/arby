@@ -26,3 +26,6 @@ jobs:
 
         - env: TOXENV=py38
           python: 3.8
+
+        - env: TOXENV=check-manifest
+          python: 3.8

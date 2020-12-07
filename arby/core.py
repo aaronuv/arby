@@ -4,11 +4,21 @@
 # License: MIT
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
+
 import numpy as np
 import logging
 from .integrals import Integration
 from random import randint  # noqa: F401
 from scipy.interpolate import splrep, splev
+
+
+# ================
+# Constants
+# ================
+
+
+# Set debbuging variable. Don't have actual implementation
+_logger = logging.getLogger()
 
 
 # ===================================
@@ -43,8 +53,8 @@ def gram_schmidt(functions, integration, max_iter=3):
     ValueError
         If functions are not linearly independent.
 
-    Notes
-    -----
+    References
+    ----------
     .. [1] Hoffmann, W. Iterative algorithms for Gram-Schmidt
       orthogonalization. Computing 41, 335–348 (1989).
       https://doi.org/10.1007/BF02241222
@@ -131,6 +141,31 @@ class ReducedOrderModeling:
     poly_deg: int, optional
         Degree <= 5 of the polynomials used to build splines. Default = 3.
 
+    Attributes
+    ----------
+    training_space: numpy.ndarray
+        Training functions.
+    Ntrain: int
+        Number of training functions or parameter points.
+    Nsamples = int
+        Number of sample or physical points.
+    physical_interval: numpy.ndarray
+        Sample points.
+    parameter_interval: numpy.ndarray
+        Parameter points.
+    integration: arby.integrals.Integration
+        Instance of the `Integration` class.
+    greedy_tol = float
+        The greedy tolerance.
+    greedy_indices_: list(int)
+        Indices selected by the reduced basis greedy algorithm.
+    Nbasis_: int
+        Number of basis elements.
+    eim_nodes_: list(int)
+        Indices selected by the EIM in `build_eim`.
+    interpolant_: numpy.ndarray
+        Empirical Interpolation matrix.
+    
     Examples
     --------
     **Build a surrogate model**
@@ -152,28 +187,7 @@ class ReducedOrderModeling:
     functions, you can tune the class parameters `greedy_tol` and `poly_deg` to
     control the precision of the reduced basis or the spline model.
     """
-    training_space = None
-    """Training functions (numpy.ndarray)."""
-    Ntrain = None
-    """Number of training functions or parameter points (int)."""
-    Nsamples = None
-    """Number of sample or physical points (int)."""
-    physical_interval = None
-    """Sample points (numpy.ndarray)."""
-    parameter_interval = None
-    """Parameter points (numpy.ndarray)."""
-    integration = None
-    """Instance of the `Integration` class (arby.integrals.Integration)."""
-    greedy_tol = 1e-12
-    """The greedy tolerance (float)."""
-    greedy_indices = None
-    """Indices selected by the reduced `basis` greedy algorithm (list(int))."""
-    Nbasis = None
-    """Number of basis elements (int)."""
-    eim_nodes = None
-    """Indices selected by the EIM in `build_eim` (list(int))."""
-    interpolant = None
-    """Empirical Interpolation matrix."""
+
     def __init__(self,
                  training_space=None,
                  physical_interval=None,
@@ -211,8 +225,6 @@ class ReducedOrderModeling:
         self._basis = basis
         # Initialize spline model for later surrogate calls
         self._spline_model = None
-        # Set debbuging variable. Don't have actual implementation
-        self._logger = logging.getLogger()
 
     # ==== Reduced Basis Method ===============================================
 
@@ -236,8 +248,8 @@ class ReducedOrderModeling:
             If ``Nsamples`` doesn't coincide with weights of the quadrature
             rule.
 
-        Notes
-        -----
+        References
+        ----------
         .. [2] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
             and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
             Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
@@ -245,7 +257,7 @@ class ReducedOrderModeling:
 
         if self._basis is not None:
             self._basis = np.asarray(self._basis)
-            self.Nbasis = self._basis.shape[0]
+            self.Nbasis_ = self._basis.shape[0]
             return self._basis
 
         self._loss = self._projection_error
@@ -273,7 +285,7 @@ class ReducedOrderModeling:
         self._norms = self.integration.norm(self.training_space)
 
         # Seed
-        self.greedy_indices = [index_seed]
+        self.greedy_indices_ = [index_seed]
         self._basis = np.empty_like(self.training_space)
         self._basis[0] = (
             self.training_space[index_seed] / self._norms[index_seed]
@@ -289,21 +301,21 @@ class ReducedOrderModeling:
         sigma = self.greedy_errors[0]
 
         # ====== Start greedy loop ======
-        self._logger.debug("\n Step", "\t", "Error")
+        _logger.debug("\n Step", "\t", "Error")
         nn = 0
         while sigma > self.greedy_tol:
             nn += 1
 
-            if next_index in self.greedy_indices:
+            if next_index in self.greedy_indices_:
                 # Prune excess allocated entries
                 self._prune(nn)
                 self._basis = self._basis[: nn]
-                self.Nbasis = nn
+                self.Nbasis_ = nn
                 return self._basis
 
-            self.greedy_indices.append(next_index)
+            self.greedy_indices_.append(next_index)
             self._basis[nn], self._basisnorms[nn] = _gs_one_element(
-                self.training_space[self.greedy_indices[nn]],
+                self.training_space[self.greedy_indices_[nn]],
                 self._basis[:nn],
                 self.integration
             )
@@ -316,11 +328,11 @@ class ReducedOrderModeling:
 
             sigma = errs[next_index]
 
-            self._logger.debug(nn, "\t", sigma)
+            _logger.debug(nn, "\t", sigma)
         # Prune excess allocated entries
         self._prune(nn + 1)
         self._basis = self._basis[:nn + 1]
-        self.Nbasis = nn + 1
+        self.Nbasis_ = nn + 1
         return self._basis
 
     # ====== Empirical Interpolation Method ===================================
@@ -337,8 +349,8 @@ class ReducedOrderModeling:
         ValueError
             If there is no basis for EIM.
 
-        Notes
-        -----
+        References
+        ----------
         .. [3] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
           and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
           Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
@@ -352,9 +364,9 @@ class ReducedOrderModeling:
         first_node = np.argmax(np.abs(self.basis[0]))
         nodes.append(first_node)
 
-        self._logger.debug(first_node)
+        _logger.debug(first_node)
 
-        for i in range(1, self.Nbasis):
+        for i in range(1, self.Nbasis_):
             v_matrix = self._next_vandermonde(nodes, v_matrix)
             base_at_nodes = [self.basis[i, t] for t in nodes]
             invV_matrix = np.linalg.inv(v_matrix)
@@ -363,13 +375,13 @@ class ReducedOrderModeling:
             residual = self.basis[i] - basis_interpolant
             new_node = np.argmax(abs(residual))
 
-            self._logger.debug(new_node)
+            _logger.debug(new_node)
             nodes.append(new_node)
 
         v_matrix = np.array(self._next_vandermonde(nodes, v_matrix))
         invV_matrix = np.linalg.inv(v_matrix.transpose())
-        self.interpolant = self.basis.transpose() @ invV_matrix
-        self.eim_nodes = nodes
+        self.interpolant_ = self.basis.transpose() @ invV_matrix
+        self.eim_nodes_ = nodes
 
     # ==== Surrogate Method ===================================================
 
@@ -401,11 +413,11 @@ class ReducedOrderModeling:
                                            )
 
             for i in range(self.Ntrain):
-                for j, node in enumerate(self.eim_nodes):
+                for j, node in enumerate(self.eim_nodes_):
                     training_compressed[i, j] = self.training_space[i, node]
 
             h_in_nodes_splined = []
-            for i in range(self.Nbasis):
+            for i in range(self.Nbasis_):
                 h_in_nodes_splined.append(
                     splrep(self.parameter_interval,
                            training_compressed[:, i],
@@ -416,7 +428,7 @@ class ReducedOrderModeling:
 
         h_surr_at_nodes = np.array(
             [splev(param, spline) for spline in self._spline_model])
-        h_surrogate = self.interpolant @ h_surr_at_nodes
+        h_surrogate = self.interpolant_ @ h_surr_at_nodes
 
         return h_surrogate
 
@@ -506,6 +518,6 @@ class ReducedOrderModeling:
 
     def interpolate(self, h):
         """Interpolate a function h at EIM nodes."""
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes])
-        h_interpolated = self.interpolant @ h_at_nodes
+        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes_])
+        h_interpolated = self.interpolant_ @ h_at_nodes
         return h_interpolated

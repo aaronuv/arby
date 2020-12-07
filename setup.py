@@ -1,11 +1,42 @@
+# setup.py
+
+# Copyright (c) 2020, Aarón Villanueva
+# License: MIT
+#   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
+
+
+# ==========================
+# Docs
+# ==========================
+
+
+"""This file is for distribute and install Arby"""
+
+
+# ==========================
+# Imports
+# ==========================
+
+
 from setuptools import setup
 import os
 
-with open("README.md", "r") as f:
-    long_description = f.read()
+
+# ==========================
+# Constants
+# ==========================
+
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
 arby_init_path = os.path.join(BASE_DIR, "arby", "__init__.py")
+
+REQUIREMENTS = ["numpy", "scipy"]
+
+
+with open("README.md", "r") as f:
+    LONG_DESCRIPTION = f.read()
+
 
 with open(arby_init_path, "r") as f:
     for line in f:
@@ -14,18 +45,35 @@ with open(arby_init_path, "r") as f:
             break
 
 
+# ==========================
+# Functions
+# ==========================
+
+
 setup(
     name="arby",
     version=ARBY_VERSION,
-    # description="Short description",
-    long_description=long_description,
+    description="Build reduced bases and surrogate models in Python",
+    long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     author="Aarón Villanueva",
     author_email="aaron.villanueva@unc.edu.ar",
     url="https://gitlab.com/aaronuv/arby",
-    packages=[
-        "arby",
+    packages=["arby"],
+    install_requires=REQUIREMENTS,
+    license="The MIT License",
+    keywords=["surrogates", "reduced basis", "empirical interpolation"],
+    classifiers=[
+        "Development Status :: 4-Beta",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Topic :: Scientific/Engineering",
     ],
-    install_requires=["numpy>=1.6", "scipy>=0.16"],
-    test_suite="tests",
 )

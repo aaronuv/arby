@@ -1,3 +1,10 @@
+# test_rompy_to_arby.py
+
+# Copyright (c) 2020, Aarón Villanueva
+# License: MIT
+#   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
+
+
 import unittest
 import arby
 import numpy as np
@@ -28,7 +35,7 @@ class TestBesselExample(unittest.TestCase):
         eim_bessel = arby.ReducedOrderModeling(basis=self.basis)
         eim_bessel.build_eim()
         # compare
-        self.assertTrue((rompy_eim_nodes == eim_bessel.eim_nodes).all())
+        self.assertTrue((rompy_eim_nodes == eim_bessel.eim_nodes_).all())
 
 
 if __name__ == "__main__":

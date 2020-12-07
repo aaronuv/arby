@@ -1,3 +1,10 @@
+# test_arby.py
+
+# Copyright (c) 2020, Aarón Villanueva
+# License: MIT
+#   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
+
+
 import unittest
 import arby
 import numpy as np

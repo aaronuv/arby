@@ -1,5 +1,10 @@
 # __init__.py
 
+# Copyright (c) 2020, Aarón Villanueva
+# License: MIT
+#   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
+
+
 """Model Order Reduction (MOR) is a technique for reducing the computational 
 the complexity of mathematical models in numerical simulations.
 

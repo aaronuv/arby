@@ -54,14 +54,14 @@ class Quadratures:
 
         Parameters
         ----------
-        interval: numpy.array
+        interval: numpy.ndarray
             The set of points on which define the quadrature.
 
         Returns
         ------
-        nodes: numpy.array
+        nodes: numpy.ndarray
             Quadrature nodes.
-        weights: numpy.array
+        weights: numpy.ndarray
             Quadrature weights.
         """
 
@@ -91,7 +91,7 @@ class Integration:
 
     Parameters
     ----------
-    interval: numpy.array
+    interval: numpy.ndarray
         Set of points to be used for integrals.
     rule: str, optional
         Quadrature rule. Default = "riemann".
