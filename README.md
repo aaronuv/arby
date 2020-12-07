@@ -1,5 +1,6 @@
 # Arby
-<img src="misc/logo.png" alt="logo" width="400"/>
+
+<img src="misc/logo.png" alt="logo" width="42%">
 
 [Model Order Reduction (MOR)](https://en.wikipedia.org/wiki/Model_order_reduction)
 is a technique for reducing the computational complexity of mathematical models in
