@@ -10,3 +10,4 @@ recursive-include docs Makefile
 recursive-include tests *.py
 recursive-include tests *.txt
 recursive-include misc *.png
+recursive-include docs *.txt
