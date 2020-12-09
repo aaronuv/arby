@@ -14,7 +14,7 @@ differential equation with a free parameter :math:`\nu`.
 
     x^2 \frac{d^2f}{dx^2} + x \frac{df}{dx} + (x^2 - \nu^2)y = 0
 
-Suppose we have numerical solutions :math:`J_{\nu}(x)` particular values of
+Suppose we have numerical solutions :math:`J_{\nu}(x)` for particular values of
 the parameter :math:`\nu`, say, for a discretized interval :math:`[1, 5]` with
 101 samples, defined in some interval for :math:`x`. For convention, we will
 refer to :math:`\nu` as the parameter variable and :math:`x` as the physical one.
