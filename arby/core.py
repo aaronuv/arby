@@ -278,7 +278,7 @@ class ReducedOrderModeling:
         seed_function = self.training_space[index_seed]
         zero_function = np.zeros_like(seed_function)
         while np.allclose(seed_function, zero_function):
-            index_seed = np.randint(1, self.Ntrain)
+            index_seed = np.random.randint(1, self.Ntrain)
             seed_function = self.training_space[index_seed]
 
         # ====== Seed the greedy algorithm and allocate memory ======
