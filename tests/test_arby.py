@@ -16,7 +16,7 @@ from scipy.special import jv as BesselJ
 
 class TestArby_core(unittest.TestCase):
     def test_basis_shape(self):
-        "Test correct shape for reduced basis"
+        """Test correct shape for reduced basis."""
         npoints = 101
         # Sample parameter nu and physical variable x
         nu = np.linspace(0, 10, num=npoints)
@@ -31,7 +31,7 @@ class TestArby_core(unittest.TestCase):
         self.assertEqual(bessel.basis.shape[1], npoints)
 
     def test_surrogate(self):
-        "Test surrogate accuracy"
+        """Test surrogate accuracy."""
         npoints = 101
         nu_train = np.linspace(1, 10, num=npoints)
         nu_validation = np.linspace(1, 10, num=1001)
@@ -52,7 +52,7 @@ class TestArby_core(unittest.TestCase):
         )
 
     def test_gram_schmidt(self):
-        "Test Gram Schmidt orthonormalization algorithm"
+        """Test Gram Schmidt orthonormalization algorithm."""
         expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
         nbasis, npoints = expected_basis.shape
         x = np.linspace(0, 1, 101)

@@ -7,7 +7,6 @@
 """ROM class and Gram-schmidt function."""
 
 import logging
-from random import randint  # noqa: F401
 
 import numpy as np
 
@@ -70,7 +69,7 @@ def gram_schmidt(functions, integration, max_iter=3):
     _, svds, _ = np.linalg.svd(functions)
 
     linear_indep_tol = 5e-15
-    if min(svds) < linear_indep_tol:
+    if np.min(svds) < linear_indep_tol:
         raise ValueError("Functions are not linearly independent.")
 
     ortho_basis = []
