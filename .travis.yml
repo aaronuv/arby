@@ -4,6 +4,7 @@ language: python
 
 install:
   - pip install tox
+   - pip install coveralls
 
 script:
   - tox -r
@@ -32,3 +33,5 @@ jobs:
         - env: TOXENV=docstyle
           python: 3.8
 
+after_success:
+  - coveralls
