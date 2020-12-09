@@ -3,7 +3,6 @@ dist: xenial
 language: python
 
 install:
-  - pip install numpy
   - pip install tox
 
 script:
