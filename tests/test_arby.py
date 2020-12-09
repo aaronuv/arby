@@ -5,6 +5,7 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 import unittest
+from random import randint
 
 import arby
 
@@ -13,7 +14,7 @@ import numpy as np
 from scipy.special import jv as BesselJ
 
 
-class TestArby(unittest.TestCase):
+class TestArby_core(unittest.TestCase):
     def test_basis_shape(self):
         "Test correct shape for reduced basis"
         npoints = 101
@@ -50,7 +51,7 @@ class TestArby(unittest.TestCase):
             np.allclose(bessel_test, bessel_surrogate, rtol=1e-5, atol=1e-5)
         )
 
-    def test_GramSchmidt(self):
+    def test_gram_schmidt(self):
         "Test Gram Schmidt orthonormalization algorithm"
         expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
         nbasis, npoints = expected_basis.shape
@@ -61,16 +62,46 @@ class TestArby(unittest.TestCase):
             np.allclose(computed_basis, expected_basis, rtol=1e-5, atol=1e-8)
         )
 
+    def test_projectors(self):
+        """Test that projectors works as true projectors."""
+        npoints = 101
+        nu_train = np.linspace(1, 10, num=npoints)
+        x = np.linspace(0, 1, 1001)
+        # build traning space
+        training = np.array([BesselJ(nn, x) for nn in nu_train])
+        # build reduced basis
+        bessel = arby.ReducedOrderModeling(
+            training_space=training,
+            physical_interval=x,
+            parameter_interval=nu_train,
+            greedy_tol=1e-12)
+        # compute a random index to test Proj_operator^2 = Proj_operator
+        random_index = randint(0, npoints)
+        proj_fun = bessel.project(training[random_index], bessel.basis)
+        proj2_fun = bessel.project(proj_fun, bessel.basis)
+        self.assertTrue(
+            np.allclose(proj_fun, proj2_fun, rtol=1e-5, atol=1e-8)
+        )
+        # compute a random index to test Interpolant^2 = Interpolant
+        random_index = randint(0, npoints)
+        # build interpolant matrix
+        bessel.build_eim()
+        interp_fun = bessel.interpolate(training[random_index])
+        interp2_fun = bessel.interpolate(interp_fun)
+        self.assertTrue(
+            np.allclose(interp_fun, interp2_fun, rtol=1e-5, atol=1e-8))
 
-class TestIntegrals(unittest.TestCase):
+
+class TestArby_Integrals(unittest.TestCase):
     def test_Integration_inputs(self):
+        """Test rule input."""
         with self.assertRaises(ValueError):
             interval = np.linspace(0, 1, 101)
             rule = "fake_rule"
             arby.integrals.Integration(interval=interval, rule=rule)
 
     def test_Integration_trapezoidal(self):
-        "Test integration rule"
+        """Test integration rule."""
         num = 101
         interval = np.linspace(1, 5, num=num)
         function = np.array([5] * num)
