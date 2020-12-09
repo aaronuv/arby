@@ -5,7 +5,6 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 import unittest
-from random import randint
 
 import arby
 
@@ -74,48 +73,48 @@ class TestArby_core(unittest.TestCase):
             training_space=training,
             physical_interval=x,
             parameter_interval=nu_train,
-            greedy_tol=1e-12)
+            greedy_tol=1e-12,
+        )
         # compute a random index to test Proj_operator^2 = Proj_operator
-        random_index = randint(0, npoints)
+        random_index = np.random.randint(0, npoints)
         proj_fun = bessel.project(training[random_index], bessel.basis)
         proj2_fun = bessel.project(proj_fun, bessel.basis)
-        self.assertTrue(
-            np.allclose(proj_fun, proj2_fun, rtol=1e-5, atol=1e-8)
-        )
+        self.assertTrue(np.allclose(proj_fun, proj2_fun, rtol=1e-5, atol=1e-8))
         # compute a random index to test Interpolant^2 = Interpolant
-        random_index = randint(0, npoints)
+        random_index = np.random.randint(0, npoints)
         # build interpolant matrix
         bessel.build_eim()
         interp_fun = bessel.interpolate(training[random_index])
         interp2_fun = bessel.interpolate(interp_fun)
         self.assertTrue(
-            np.allclose(interp_fun, interp2_fun, rtol=1e-5, atol=1e-8))
+            np.allclose(interp_fun, interp2_fun, rtol=1e-5, atol=1e-8)
+        )
 
-        def test_projection_error(self):
-            """Test auto-consistency for projection error function."""
-            npoints = 101
-            nu_train = np.linspace(1, 10, num=npoints)
-            x = np.linspace(0, 1, 1001)
-            # build traning space
-            training = np.array([BesselJ(nn, x) for nn in nu_train])
-            # build reduced basis
-            bessel = arby.ReducedOrderModeling(
-                training_space=training,
-                physical_interval=x,
-                parameter_interval=nu_train,
-                greedy_tol=1e-12)
-            # Check that projection errors of basis elements onto the basis is
-            # zero
-            computed_errors = [projection_error(basis_element, bessel.basis)
-                      for _, basis_element in enumerate(bessel.basis)]
-            expected_errors = [0.] * bessel.Nbasis
-            self.assertTrue(
-                            np.allclose(
-                                        computed_errors,
-                                        expected_errors,
-                                        rtol=1e-5, atol=1e-8
-                                        )
-                           )
+    def test_projection_error(self):
+        """Test auto-consistency for projection error function."""
+        npoints = 101
+        nu_train = np.linspace(1, 10, num=npoints)
+        x = np.linspace(0, 1, 1001)
+        # build traning space
+        training = np.array([BesselJ(nn, x) for nn in nu_train])
+        # build reduced basis
+        bessel = arby.ReducedOrderModeling(
+            training_space=training,
+            physical_interval=x,
+            parameter_interval=nu_train,
+            greedy_tol=1e-12,
+        )
+        # Check that projection errors of basis elements onto the basis is
+        # zero
+        computed_errors = [
+            bessel.projection_error(basis_element, bessel.basis)
+            for _, basis_element in enumerate(bessel.basis)
+        ]
+        expected_errors = [0.0] * bessel.Nbasis_
+        self.assertTrue(
+            np.allclose(computed_errors, expected_errors, rtol=1e-5, atol=1e-8)
+        )
+
 
 class TestArby_Integrals(unittest.TestCase):
     def test_Integration_inputs(self):
