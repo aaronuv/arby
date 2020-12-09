@@ -1,6 +1,6 @@
 # Arby
 
-<img src="misc/logo.png" alt="logo" width="42%">
+<img src="res/logo.png" alt="logo" width="42%">
 
 [![PyPI version](https://badge.fury.io/py/arby.svg)](https://badge.fury.io/py/arby)
 
