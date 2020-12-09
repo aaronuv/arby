@@ -3,8 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Arby
-====
+Arby's documentation
+====================
+
+.. image:: https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00
+   :target: https://github.com/leliel12/diseno_sci_sfw
+   :alt: Curso doctoral FAMAF: Diseño de software para cómputo científico
 
 `Model Order Reduction (MOR) <https://en.wikipedia.org/wiki/Model_order_reduction>`_ is
 a technique for reducing the computational complexity of mathematical models in numerical simulations.
