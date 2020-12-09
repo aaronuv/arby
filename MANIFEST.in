@@ -5,6 +5,6 @@ recursive-include tests *.py
 exclude tox.ini
 exclude .flake8
 exclude .travis.ylm
-recursive-exclude tests
-recursive-exclude docs
-recursive-exclude res
+recursive-exclude tests *
+recursive-exclude docs *
+recursive-exclude res *
