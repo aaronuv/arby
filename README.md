@@ -3,7 +3,9 @@
 <img src="res/logo.png" alt="logo" width="42%">
 
 [![PyPI version](https://badge.fury.io/py/arby.svg)](https://badge.fury.io/py/arby)
+
 [![https://github.com/leliel12/diseno_sci_sfw](https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00)](https://github.com/leliel12/diseno_sci_sfw)
+
 [![Coverage Status](https://coveralls.io/repos/gitlab/aaronuv/arby/badge.svg?branch=master)](https://coveralls.io/gitlab/aaronuv/arby?branch=master)
 
 [Model Order Reduction (MOR)](https://en.wikipedia.org/wiki/Model_order_reduction)
