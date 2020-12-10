@@ -8,7 +8,7 @@ install:
 
 script:
   - tox -r
-  - sbt clean coverage test
+  - clean coverage test
 
 jobs:
     include:
@@ -35,4 +35,4 @@ jobs:
           python: 3.8
 
 after_success:
-  - sbt coveralls
+  - coveralls
