@@ -33,5 +33,5 @@ jobs:
         - env: TOXENV=docstyle
           python: 3.8
 
-after_all_success:
+after_success:
   - coveralls
