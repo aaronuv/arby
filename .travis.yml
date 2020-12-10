@@ -4,7 +4,7 @@ language: python
 
 install:
   - pip install tox
-
+  - pip install codecov
 script:
   - tox -r
 
@@ -33,4 +33,4 @@ jobs:
           python: 3.8
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - codecov
