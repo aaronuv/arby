@@ -7,7 +7,6 @@
 [![Documentation Status](https://readthedocs.org/projects/arby/badge/?version=latest)](https://arby.readthedocs.io/en/latest/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/gitlab/aaronuv/arby/badge.svg?branch=master)](https://coveralls.io/gitlab/aaronuv/arby?branch=master)
 [![https://github.com/leliel12/diseno_sci_sfw](https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00)](https://github.com/leliel12/diseno_sci_sfw)
-[![Python version](https://img.shields.io/badge/python-3.6_--_3.7_--_3.8-blue)](https://img.shields.io/endpoint?&style<plastic&logo=appveyor>)
 
 [Model Order Reduction (MOR)](https://en.wikipedia.org/wiki/Model_order_reduction)
 is a technique for reducing the computational complexity of mathematical models in
