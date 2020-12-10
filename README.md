@@ -3,7 +3,7 @@
 <img src="res/logo.png" alt="logo" width="42%">
 
 [![PyPI version](https://badge.fury.io/py/arby.svg)](https://badge.fury.io/py/arby)
-[![Build Status](https://travis-ci.com/aaronuv/rbpy.svg?branch=master)](https://travis-ci.com/aaronuv/rbpy)
+[![Build Status](https://travis-ci.com/aaronuv/arby.svg?branch=master)](https://travis-ci.com/aaronuv/arby)
 [![Documentation Status](https://readthedocs.org/projects/arby/badge/?version=latest)](https://arby.readthedocs.io/en/latest/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/gitlab/aaronuv/arby/badge.svg?branch=master)](https://coveralls.io/gitlab/aaronuv/arby?branch=master)
 [![https://github.com/leliel12/diseno_sci_sfw](https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00)](https://github.com/leliel12/diseno_sci_sfw)
