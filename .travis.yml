@@ -4,10 +4,11 @@ language: python
 
 install:
   - pip install tox
-  - pip install coveralls
+  - pip install codecov
 
 script:
   - tox -r
+  - py.test  --cov-report term --cov=app/test/
 
 jobs:
     include:
@@ -34,4 +35,4 @@ jobs:
           python: 3.8
 
 after_success:
-  - coveralls
+  - codecov
