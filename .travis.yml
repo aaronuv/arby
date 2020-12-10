@@ -8,7 +8,6 @@ install:
 
 script:
   - tox -r
-  - py.test  --cov-report term --cov=app/test/
 
 jobs:
     include:
