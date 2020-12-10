@@ -14,6 +14,26 @@ from scipy.special import jv as BesselJ
 
 
 class TestArby_core(unittest.TestCase):
+    def test_inputs(self):
+        training = np.loadtxt("tests/bessel/bessel_training.txt")
+        with self.assertRaises(ValueError):
+            Nsamples = 10
+            x = np.linspace(0, 1, 101)
+            sliced_training = training[:, :Nsamples]
+            arby.ReducedOrderModeling(sliced_training, x)
+
+        with self.assertRaises(ValueError):
+            Nsamples = training.shape[1]
+            wrong_Nsamples = 11
+            x = np.linspace(0, 1, wrong_Nsamples)
+            arby.ReducedOrderModeling(training, x)
+
+        with self.assertRaises(ValueError):
+            wrong_Ntrain = 11
+            x = np.linspace(0, 1, 101)
+            nu = np.linspace(0, 10, wrong_Ntrain)
+            arby.ReducedOrderModeling(training, x, nu)
+
     def test_basis_shape(self):
         """Test correct shape for reduced basis."""
         npoints = 101
@@ -28,6 +48,18 @@ class TestArby_core(unittest.TestCase):
         # Assert that basis has correct shape
         self.assertEqual(bessel.basis.ndim, 2)
         self.assertEqual(bessel.basis.shape[1], npoints)
+
+    def test_greedy_already_selected(self):
+        """Test greedy stopping condition."""
+        npoints = 101
+        # Sample parameter nu and physical variable x
+        nu = np.linspace(0, 10, num=npoints)
+        x = np.linspace(0, 1, 101)
+        # build traning space
+        training = np.array([BesselJ(nn, x) for nn in nu])
+        # build reduced basis with exagerated greedy_tol
+        bessel = arby.ReducedOrderModeling(training, x, greedy_tol=1e-20)
+        bessel.basis
 
     def test_surrogate(self):
         """Test surrogate accuracy."""
@@ -60,6 +92,11 @@ class TestArby_core(unittest.TestCase):
         self.assertTrue(
             np.allclose(computed_basis, expected_basis, rtol=1e-5, atol=1e-8)
         )
+        # non linear independence error capturing
+        with self.assertRaises(ValueError):
+            non_li_functions = expected_basis
+            non_li_functions[0] = expected_basis[1]
+            computed_basis = arby.gram_schmidt(expected_basis, integration)
 
     def test_projectors(self):
         """Test that projectors works as true projectors."""
@@ -122,6 +159,14 @@ class TestArby_Integrals(unittest.TestCase):
         with self.assertRaises(ValueError):
             interval = np.linspace(0, 1, 101)
             rule = "fake_rule"
+            arby.integrals.Integration(interval=interval, rule=rule)
+        with self.assertRaises(ValueError):
+            interval = None
+            rule = "riemann"
+            arby.integrals.Integration(interval=interval, rule=rule)
+        with self.assertRaises(TypeError):
+            interval = np.linspace(0, 1, 101)
+            rule = 1 / 137
             arby.integrals.Integration(interval=interval, rule=rule)
 
     def test_Integration_trapezoidal(self):
