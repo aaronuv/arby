@@ -64,7 +64,7 @@ MIT
 
 # Contributors
 
-[@aaronuv](https://gitlab.com/aaronuv)
+[@aaronuv](https://gitlab.com/aaronuv) 
 
 # Contact Us
 
