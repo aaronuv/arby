@@ -56,7 +56,7 @@ interval [`par_min`, `par_max`] simply by calling it:
 
 # Documentation
 
-For more details and examples check the [read the docs](arby.readthedocs.io).
+For more details and examples check the [read the docs](https://arby.readthedocs.io/en/latest/).
 
 # License
 
