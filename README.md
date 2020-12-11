@@ -62,6 +62,14 @@ For more details and examples check the [read the docs](https://arby.readthedocs
 
 MIT
 
+# Contributors
+
+[@aaronuv](https://gitlab.com/aaronuv)
+
+# Contact Us
+
+<aaron.villanueva@unc.edu.ar>
+
 ***
 
 (c) 2020 Aarón Villanueva
