@@ -36,7 +36,7 @@ x_samples = np.linspace(a, b, Nsamples)
 ```
 Next, we build a training set
 ```
-training_set = [f(par, x_samples) for lambda in params]
+training_set = [f(par, x_samples) for par in params]
 ```
 that has shape (`Ntrain`,`Nsamples`).
 
