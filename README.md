@@ -11,7 +11,7 @@
 
 Arby is a fully data-driven Python module to construct surrogate models, reduced bases and empirical interpolants from training data.
 
-Arby implements a type of [Reduced Order Modeling](https://en.wikipedia.org/wiki/Model_order_reduction) technique for reducing the computational complexity of mathematical models in numerical simulations.
+This module implements a type of [Reduced Order Modeling](https://en.wikipedia.org/wiki/Model_order_reduction) technique for reducing the computational complexity of mathematical models in numerical simulations.
 
 # Install
 
