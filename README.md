@@ -28,7 +28,7 @@ With Arby we can build an accurate *surrogate model* to represent the training s
 suppose a discretization of the parameter domain [`par_min`, `par_max`] with `Ntrain` samples
 indexing the training set
 ```
-params = np.linspace(par_min,par_max, Ntrain)
+params = np.linspace(par_min, par_max, Ntrain)
 ```
 and a discretization of the x domain $`[a,b]`$ in `Nsamples` points
 ```
