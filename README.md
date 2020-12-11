@@ -1,6 +1,6 @@
 # Arby
 
-<img src="res/logo.png" alt="logo" width="42%">
+<img src="res/logo.png" alt="logo" width="60%">
 
 [![PyPI version](https://badge.fury.io/py/arby.svg)](https://badge.fury.io/py/arby)
 [![Build Status](https://travis-ci.com/aaronuv/arby.svg?branch=master)](https://travis-ci.com/aaronuv/arby)
