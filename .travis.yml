@@ -4,8 +4,7 @@ language: python
 
 install:
   - pip install tox
-  - pip install coveralls
-
+  - pip install codecov
 script:
   - tox -r
 
@@ -34,4 +33,4 @@ jobs:
           python: 3.8
 
 after_success:
-  - coveralls
+  - codecov
