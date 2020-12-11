@@ -124,9 +124,9 @@ class ReducedOrderModeling:
     This class comprises a set of tools to build and manage reduced bases,
     empirical interpolants and predictive models from a pre-computed training
     space of functions. The underlying model g(v,x) describing the training
-    space is a real or complex function parameterized by v called the
-    ``training`` parameter. The dual variable x, called the ``physical``
-    variable, belongs to the domain in which an inner product is defined.
+    space is a real function parameterized by v called the ``training``
+    parameter. The dual variable x, called the ``physical`` variable, belongs
+    to the domain in which an inner product is defined.
 
     Parameters
     ----------
