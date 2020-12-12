@@ -6,9 +6,9 @@
 
 Arby's documentation
 ====================
-
-.. image:: _static/logo.png
-  :width: 600
+.. only:: html
+    .. image:: _static/logo.png
+      :width: 600
   :alt: Arby's logo
 .. image:: https://badge.fury.io/py/arby.svg
    :target: https://badge.fury.io/py/arby
@@ -64,7 +64,7 @@ Next, we build a training set
 
         training_set = [f(par, x_samples) for par in params]
 
-that has shape (``Ntrain``,``Nsamples``).
+that has shape (``Ntrain``, ``Nsamples``).
 
 Then we build the surrogate model with Arby by doing:
 ::
