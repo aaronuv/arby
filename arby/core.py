@@ -118,15 +118,15 @@ def _gs_one_element(h, basis, integration, max_iter=3):
 # =================================
 
 
-class ReducedOrderModeling:
+class ReducedOrderModel:
     """Build reduced order models from training data.
 
     This class comprises a set of tools to build and manage reduced bases,
     empirical interpolants and predictive models from a pre-computed training
     space of functions. The underlying model g(v,x) describing the training
-    space is a real function parameterized by v called the ``training``
-    parameter. The dual variable x, called the ``physical`` variable, belongs
-    to the domain in which an inner product is defined.
+    space is a real function parameterized by v called the *training*
+    parameter. The dual variable x, called the *physical* variable, belongs
+    to the domain in which an inner product is defined. bla
 
     Parameters
     ----------
@@ -177,7 +177,7 @@ class ReducedOrderModeling:
     --------
     **Build a surrogate model**
 
-    >>> from arby import ReducedOrderModeling as ROM
+    >>> from arby import ReducedOrderModel as ROM
 
     Input the three most important parameters.
 
@@ -185,8 +185,8 @@ class ReducedOrderModeling:
 
     Build and evaluate the surrogate model. The building stage is done once and
     for all. It could take some time. For this reason this stage is called the
-    ``offline`` stage. The subsequent calls will invoke the built surrogate
-    spline model and then evaluate. This is called the ``online`` stage.
+    *offline* stage. The subsequent calls will invoke the built surrogate
+    spline model and then evaluate. This is called the *online* stage.
 
     >>> model.surrogate(parameter)
 

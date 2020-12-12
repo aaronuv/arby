@@ -69,7 +69,7 @@ that has shape (``Ntrain``,``Nsamples``).
 Then we build the surrogate model with Arby by doing:
 ::
 
-        from arby import ReducedOrderModeling as ROM
+        from arby import ReducedOrderModel as ROM
         f_model = ROM(training_space=training_set,
                       physical_interval=x_samples,
                       parameter_interval=params)

@@ -5,10 +5,7 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 
-"""Reduced Order Modeling tools to build surrogate models.
-
-Model Order Reduction (MOR) is a technique for reducing the computational
-the complexity of mathematical models in numerical simulations.
+"""Reduced Order Modeling tools for building surrogate models.
 
 Arby is a fully data-driven Python module to construct reduced bases, empirical
 interpolants and surrogate models from training data.
@@ -17,7 +14,7 @@ interpolants and surrogate models from training data.
 
 __version__ = "0.1"
 
-__all__ = ["Integration", "ReducedOrderModeling", "gram_schmidt"]
+__all__ = ["Integration", "ReducedOrderModel", "gram_schmidt"]
 
-from .core import ReducedOrderModeling, gram_schmidt
+from .core import ReducedOrderModel, gram_schmidt
 from .integrals import Integration

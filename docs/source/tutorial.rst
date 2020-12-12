@@ -25,7 +25,7 @@ we will generate the sample data using scipy's Bessel special functions.
 
 .. code-block:: python
 
-        from arby import ReducedOrderModeling as ROM
+        from arby import ReducedOrderModel as ROM
         from scipy.special import jv as BesselJ
 
         npoints = 101
@@ -124,7 +124,7 @@ validation.
 
 As we can see, the maximum error is about :math:`\sim` 1e-6 or, squared, :math:`\sim` 1e-12,
 which is the same value as the default value of the ``greedy_tol`` parameter of
-the ``ReducedOrderModeling`` class:
+the ``ReducedOrderModel`` class:
 ::
 
         bessel.greedy_tol
@@ -182,7 +182,7 @@ finite dimensional subspace capable to represent the entire training set up to a
 chosen by the user.
 
 To build a reduced basis with Arby, you just provide the training set of functions and the
-discretization of the physical variable :math:`x` to the ``ReducedOrderModeling`` class.
+discretization of the physical variable :math:`x` to the ``ReducedOrderModel`` class.
 The later is to define the integration scheme used to compute inner products. For the
 Bessel example,
 
