@@ -20,19 +20,19 @@ class TestArby_core(unittest.TestCase):
             Nsamples = 10
             x = np.linspace(0, 1, 101)
             sliced_training = training[:, :Nsamples]
-            arby.ReducedOrderModeling(sliced_training, x)
+            arby.ReducedOrderModel(sliced_training, x)
 
         with self.assertRaises(ValueError):
             Nsamples = training.shape[1]
             wrong_Nsamples = 11
             x = np.linspace(0, 1, wrong_Nsamples)
-            arby.ReducedOrderModeling(training, x)
+            arby.ReducedOrderModel(training, x)
 
         with self.assertRaises(ValueError):
             wrong_Ntrain = 11
             x = np.linspace(0, 1, 101)
             nu = np.linspace(0, 10, wrong_Ntrain)
-            arby.ReducedOrderModeling(training, x, nu)
+            arby.ReducedOrderModel(training, x, nu)
 
     def test_basis_shape(self):
         """Test correct shape for reduced basis."""
@@ -43,7 +43,7 @@ class TestArby_core(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu])
         # build reduced basis
-        bessel = arby.ReducedOrderModeling(training, x, greedy_tol=1e-12)
+        bessel = arby.ReducedOrderModel(training, x, greedy_tol=1e-12)
 
         # Assert that basis has correct shape
         self.assertEqual(bessel.basis.ndim, 2)
@@ -58,7 +58,7 @@ class TestArby_core(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu])
         # build reduced basis with exagerated greedy_tol
-        bessel = arby.ReducedOrderModeling(training, x, greedy_tol=1e-20)
+        bessel = arby.ReducedOrderModel(training, x, greedy_tol=1e-20)
         bessel.basis
 
     def test_surrogate(self):
@@ -70,7 +70,7 @@ class TestArby_core(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu_train])
         # build reduced basis
-        bessel = arby.ReducedOrderModeling(
+        bessel = arby.ReducedOrderModel(
             training_space=training,
             physical_interval=x,
             parameter_interval=nu_train,
@@ -106,7 +106,7 @@ class TestArby_core(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu_train])
         # build reduced basis
-        bessel = arby.ReducedOrderModeling(
+        bessel = arby.ReducedOrderModel(
             training_space=training,
             physical_interval=x,
             parameter_interval=nu_train,
@@ -135,7 +135,7 @@ class TestArby_core(unittest.TestCase):
         # build traning space
         training = np.array([BesselJ(nn, x) for nn in nu_train])
         # build reduced basis
-        bessel = arby.ReducedOrderModeling(
+        bessel = arby.ReducedOrderModel(
             training_space=training,
             physical_interval=x,
             parameter_interval=nu_train,
