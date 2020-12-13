@@ -34,6 +34,12 @@ class TestArby_core(unittest.TestCase):
             nu = np.linspace(0, 10, wrong_Ntrain)
             arby.ReducedOrderModel(training, x, nu)
 
+        with self.assertRaises(ValueError):
+            x = np.linspace(0, 1, 101)
+            bessel = arby.ReducedOrderModel(training, x)
+            bessel.Nsamples += 1
+            bessel.basis
+
     def test_basis_shape(self):
         """Test correct shape for reduced basis."""
         npoints = 101

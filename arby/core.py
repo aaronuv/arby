@@ -154,7 +154,7 @@ class ReducedOrderModel:
         Training functions.
     Ntrain: int
         Number of training functions or parameter points.
-    Nsamples = int
+    Nsamples: int
         Number of sample or physical points.
     physical_interval: numpy.ndarray
         Sample points.
@@ -368,9 +368,6 @@ class ReducedOrderModel:
           Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
 
         """
-        if self.basis is None:
-            raise ValueError("There is no basis to work with.")
-
         nodes = []
         v_matrix = None
         first_node = np.argmax(np.abs(self.basis[0]))
