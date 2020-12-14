@@ -9,7 +9,7 @@ Arby's documentation
 .. only:: html
     .. image:: _static/logo.png
       :width: 600
-  :alt: Arby's logo
+      :alt: Arby's logo
 .. image:: https://badge.fury.io/py/arby.svg
    :target: https://badge.fury.io/py/arby
    :alt: PyPI version

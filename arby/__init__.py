@@ -7,9 +7,6 @@
 
 """Reduced Order Modeling tools for building surrogate models.
 
-Arby is a fully data-driven Python module to construct reduced bases, empirical
-interpolants and surrogate models from training data.
-
 """
 
 __version__ = "0.1"

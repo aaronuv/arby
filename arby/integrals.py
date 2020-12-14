@@ -5,7 +5,7 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 
-"""Classes and functions to define an integration scheme."""
+"""Classes and functions to define integration schemes."""
 
 import numpy as np
 
