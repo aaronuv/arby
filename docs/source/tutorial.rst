@@ -85,7 +85,7 @@ models.
 
 .. math::
 
-    e(\nu)^2 = \| J_\nu - J_\nu^{sur} \|^2 = \int_{[a,b]} |J_\nu(x) - J_\nu^{sur}(x)| dx
+    e(\nu)^2 = \| J_\nu - J_\nu^{sur} \|^2 = \int_{[a,b]} |J_\nu(x) - J_\nu^{sur}(x)|^2 dx
 
 We compute this for an arbitrary parameter ``par`` simply by calling the ``integration``
 object defined inside the ``bessel_model``. This object comprises quadrature rules
