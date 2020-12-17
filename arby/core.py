@@ -295,7 +295,6 @@ class ReducedOrderModel:
         )
 
         self._norms = self.integration.norm(self.training_space)
-
         # Seed
         self.greedy_indices_ = [index_seed]
         self._basis = np.empty_like(self.training_space)
