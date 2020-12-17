@@ -64,7 +64,6 @@ setup(
     license="The MIT License",
     keywords=["surrogates", "reduced basis", "empirical interpolation"],
     classifiers=[
-        "Development Status :: 4-Beta",
         "Intended Audience :: Education",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
