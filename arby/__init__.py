@@ -5,9 +5,7 @@
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
 
-"""Reduced Order Modeling tools for building surrogate models.
-
-"""
+"""Reduced Order Modeling tools for building surrogate models."""
 
 __version__ = "0.2"
 
