@@ -40,8 +40,7 @@ with open(os.path.join("..", "..", "arby", "__init__.py"), "r") as f:
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
-    "nbsphinx"
+    "sphinx.ext.napoleon"
 ]
 
 # Add any paths that contain templates here, relative to this directory.
