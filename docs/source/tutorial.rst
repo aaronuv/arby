@@ -94,7 +94,7 @@ to define an integration scheme.
 
         L2_error = bessel_model.integration.norm(BesselJ(par, x) - bessel_par)
 
-For instance, for ``par = 4.30`` it gives ``1.1533694546001233e-06``. Let's us compute
+For instance, for ``par = 4.30`` it gives ``L2_error = 1.1533694546001233e-06``. Let us compute
 a benchmark for the entire parameter interval with a dense sampling ``nu_val`` for
 validation.
 ::
