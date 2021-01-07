@@ -51,7 +51,7 @@ With `f_model` we can get function samples for any parameter `par` in the
 interval [`par_min`, `par_max`] simply by calling it:
 
     f_model_at_par = f_model.surrogate(par)
-    plt.plot(x_samples, model_at_par)
+    plt.plot(x_samples, f_model_at_par)
     plt.show()
 
 # Documentation
