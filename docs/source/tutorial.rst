@@ -213,7 +213,7 @@ functions we do
 .. code-block:: python
 
         projected_f = bessel_model.project(f, reduced_basis)
-        squared_L2_error = bessel_model.integration,norm(f - projected_f)
+        squared_L2_error = bessel_model.integration.norm(f - projected_f)
 
 
 
