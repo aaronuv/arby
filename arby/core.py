@@ -185,7 +185,7 @@ class ReducedOrderModel:
 
     Build and evaluate the surrogate model. The building stage is done once and
     for all. It could take some time. For this reason this stage is called the
-    *offline* stage. The subsequent calls will invoke the built surrogate
+    *offline* stage. Subsequent calls will invoke the built surrogate
     spline model and then evaluate. This is called the *online* stage.
 
     >>> model.surrogate(parameter)
