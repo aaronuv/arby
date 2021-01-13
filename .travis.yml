@@ -34,5 +34,4 @@ jobs:
           python: 3.8
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash) -t 5c8ebf06-61c5-4c2f-8edc-58397afde383
-
+  - bash <(curl -s https://codecov.io/bash)
