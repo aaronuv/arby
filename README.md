@@ -19,18 +19,18 @@ This module implements a type of [Reduced Order Modeling](https://en.wikipedia.o
 
 # Quick Usage
 
-Suppose we have a set of real functions parametrized by a real number $`\lambda`$. This set,
-the *training set*, represents an underlying parametrized model $`f_\lambda(x)`$
-with continuous dependency in $`\lambda`$. Without complete knowledge about $`f_\lambda`$,
-we'd like to produce an accurate approximation only through the access to the training set.
+Suppose we have a set of real functions parametrized by a real number &lambda;. This set,
+the *training set*, represents an underlying parametrized model f<sub>&lambda;</sub>(x)
+with continuous dependency in &lambda;. Without a complete knowledge about f<sub>&lambda;</sub>(x),
+we'd like to produce an accurate approximation only through access to the training set.
 
-With Arby we can build an accurate *surrogate model* to represent the training set. For simplicity,
+With Arby we can do this by building a *surrogate model* for the original one using only the training set. For simplicity,
 suppose a discretization of the parameter domain [`par_min`, `par_max`] with `Ntrain` samples
 indexing the training set
 ```
 params = np.linspace(par_min, par_max, Ntrain)
 ```
-and a discretization of the x domain $`[a,b]`$ in `Nsamples` points
+and a discretization of the x domain [a,b] in `Nsamples` points
 ```
 x_samples = np.linspace(a, b, Nsamples)
 ```
