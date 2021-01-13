@@ -7,8 +7,8 @@
 [![Documentation Status](https://readthedocs.org/projects/arby/badge/?version=latest)](https://arby.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/aaronuv/arby/branch/master/graph/badge.svg?token=684K3V8G70)](https://codecov.io/gh/aaronuv/arby)
 [![Python version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)
-[![DOI](https://zenodo.org/badge/329409745.svg)](https://zenodo.org/badge/latestdoi/329409745)
 [![https://github.com/leliel12/diseno_sci_sfw](https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00)](https://github.com/leliel12/diseno_sci_sfw)
+[![DOI](https://zenodo.org/badge/329409745.svg)](https://zenodo.org/badge/latestdoi/329409745)
 
 Arby is a fully data-driven Python module to construct surrogate models, reduced bases and empirical interpolants from training data.
 
