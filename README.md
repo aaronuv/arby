@@ -8,6 +8,7 @@
 [![codecov](https://codecov.io/gh/aaronuv/arby/branch/master/graph/badge.svg?token=684K3V8G70)](https://codecov.io/gh/aaronuv/arby)
 [![Python version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)
 [![https://github.com/leliel12/diseno_sci_sfw](https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00)](https://github.com/leliel12/diseno_sci_sfw)
+
 Arby is a fully data-driven Python module to construct surrogate models, reduced bases and empirical interpolants from training data.
 
 This module implements a type of [Reduced Order Modeling](https://en.wikipedia.org/wiki/Model_order_reduction) technique for reducing the computational complexity of mathematical models in numerical simulations.
