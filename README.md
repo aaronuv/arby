@@ -40,7 +40,7 @@ training_set = [f(par, x_samples) for par in params]
 ```
 that has shape (`Ntrain`,`Nsamples`).
 
-Finally, we build the surrogate model with Arby by doing:
+Finally, we build the surrogate model simply by doing:
 
     from arby import ReducedOrderModel as ROM
     f_model = ROM(training_space=training_set,
