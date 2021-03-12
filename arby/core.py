@@ -521,14 +521,38 @@ class ReducedOrderModel:
         return l2_error
 
     def project(self, h, basis):
-        """Project a function h on a basis."""
+        """Project a function h on a basis.
+
+        Parameters
+        ----------
+        h: numpy.array
+            Function or set of functions to be projected.
+        basis: numpy.array
+            Orthonormal basis.
+
+        Returns
+        -------
+        projected_function: numpy.array
+            Projection of h on the given basis.
+        """
         projected_function = 0.0
         for e in basis:
             projected_function += e * self.integration.dot(e, h)
         return projected_function
 
     def interpolate(self, h):
-        """Interpolate a function h at EIM nodes."""
+        """Interpolate a function h at EIM nodes.
+
+        Parameters
+        ----------
+        h: numpy.array
+            Function or set of functions to be interpolated.
+
+        Returns
+        -------
+        h_interpolated: numpy.array
+            Function h interpolated at EIM nodes.
+        """
         h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes_])
         h_interpolated = self.interpolant_ @ h_at_nodes
         return h_interpolated
