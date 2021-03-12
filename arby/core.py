@@ -532,7 +532,7 @@ class ReducedOrderModel:
 
         Returns
         -------
-        projected_function: float
+        projected_function: numpy.array
             Projection of h on the given basis.
         """
         projected_function = 0.0
