@@ -6,19 +6,23 @@
 
 Arby's documentation
 ====================
-.. only:: html
-   .. image:: _static/logo.png
-      :width: 600
-      :alt: Arby's logo
+
+.. image:: _static/logo.png
+   :width: 600
+   :alt: Arby's logo
+
 .. image:: https://badge.fury.io/py/arby.svg
    :target: https://badge.fury.io/py/arby
    :alt: PyPI version
+
 .. image:: https://travis-ci.com/aaronuv/arby.svg?branch=master
    :target: https://travis-ci.com/aaronuv/arby
    :alt: Build Status
+
 .. image:: https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue
    :target: https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue
    :alt: Python version
+   
 .. image:: https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00
    :target: https://github.com/leliel12/diseno_sci_sfw
    :alt: Curso doctoral FAMAF: Diseño de software para cómputo científico
