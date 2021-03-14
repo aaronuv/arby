@@ -12,7 +12,7 @@ differential equation with a free parameter :math:`\nu`.
 
 .. math::
 
-    x^2 \frac{d^2f}{dx^2} + x \frac{df}{dx} + (x^2 - \nu^2)y = 0
+    x^2 \frac{d^2f}{dx^2} + x \frac{df}{dx} + (x^2 - \nu^2)f = 0
 
 Suppose we have numerical solutions :math:`J_{\nu}(x)` for particular values of
 the parameter :math:`\nu`, say, for a discretized interval :math:`[1, 5]` with
@@ -55,7 +55,7 @@ and the surrogate :math:`J_\nu^{sur}(x)`, at some parameter values in the interv
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=(8,5))
-        plt.plot(x, bessel.surrogate(2), 'r', lw=2, label='$J_ν(x)$')
+        plt.plot(x, bessel_model.surrogate(2), 'r', lw=2, label='$J_ν(x)$')
         plt.plot(x, BesselJ(2,x), 'b-.', lw=2, label='$J_ν^{sur}(x)$')
         plt.xlabel('$x$')
         plt.title('Function curves at ν = 2')
@@ -104,14 +104,14 @@ validation.
 
         # compute errors for `nu_eval`
         errors = errors = [
-                 bessel.integration.norm(BesselJ(par, x) - bessel.surrogate(par))
+                 bessel_model.integration.norm(BesselJ(par, x) - bessel_model.surrogate(par))
                  for par in nu_val
                           ]
 
         # plot
         fig = plt.figure(figsize=(8,3))
         plt.semilogy(nu_val, errors, lw=1.5)
-        plt.xlabel('$x$')
+        plt.xlabel('$\\nu$')
         plt.ylabel('$L_2$ errors')
         plt.title('Validation errors')
         plt.show()
