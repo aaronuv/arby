@@ -86,7 +86,7 @@ class Integration:
     nodes_ = attr.ib(init=False, repr=False)
     weights_ = attr.ib(init=False, repr=False)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self):  # noqa  to skip pydocstyle in the method
         quadrature = QUADRATURES[self.rule]
         nodes, weights = quadrature(self.interval)
 

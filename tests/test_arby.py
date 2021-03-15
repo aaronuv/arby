@@ -157,8 +157,3 @@ class TestArby_core(unittest.TestCase):
         self.assertTrue(
             np.allclose(computed_errors, expected_errors, rtol=1e-5, atol=1e-8)
         )
-
-
-
-if __name__ == "__main__":
-    unittest.main()
