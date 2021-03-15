@@ -159,38 +159,6 @@ class TestArby_core(unittest.TestCase):
         )
 
 
-class TestArby_Integrals(unittest.TestCase):
-
-    def test_Integration_inputs(self):
-        """Test rule input."""
-
-        with self.assertRaises(ValueError):
-            interval = np.linspace(0, 1, 101)
-            rule = "fake_rule"
-            arby.integrals.Integration(interval=interval, rule=rule)
-
-        with self.assertRaises(ValueError):
-            interval = np.linspace(0, 1, 101)
-            rule = 1 / 137
-            arby.integrals.Integration(interval=interval, rule=rule)
-
-    def test_Integration_trapezoidal(self):
-        """Test integration rule."""
-        num = 101
-        interval = np.linspace(1, 5, num=num)
-        function = np.array([5] * num)
-        integration = arby.Integration(interval=interval, rule="trapezoidal")
-        computed_area_under_curve = integration.integral(function)
-        exact_area_under_curve = 20
-        self.assertTrue(
-            np.allclose(
-                computed_area_under_curve,
-                exact_area_under_curve,
-                rtol=1e-5,
-                atol=1e-8,
-            )
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

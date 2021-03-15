@@ -284,7 +284,7 @@ class ReducedOrderModel:
         # ====== Seed the greedy algorithm and allocate memory ======
 
         # Validate inputs
-        if self.Nsamples != np.size(self.integration.weights):
+        if self.Nsamples != np.size(self.integration.weights_):
             raise ValueError(
                 "Number of samples is inconsistent " "with quadrature rule."
             )

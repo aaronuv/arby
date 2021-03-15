@@ -7,6 +7,8 @@
 
 """Classes and functions to define integration schemes."""
 
+import attr
+
 import numpy as np
 
 
@@ -58,23 +60,12 @@ QUADRATURES = {
 }
 
 
-def _nodes_weights(interval, rule):
-    """Build nodes and weights."""
-
-    quadrature = QUADRATURES.get(rule)
-    # Generate requested quadrature rule
-    if quadrature is None:
-        raise ValueError(f"Requested quadrature rule ({rule}) not available.")
-
-    all_nodes, all_weights = quadrature(interval)
-    return all_nodes, all_weights, rule
-
-
 ##############################
 # Class for quadrature rules #
 ##############################
 
 
+@attr.s(frozen=True)
 class Integration:
     """Comprise an integration scheme.
 
@@ -87,24 +78,33 @@ class Integration:
 
     """
 
-    def __init__(self, interval, rule="riemann"):
+    interval = attr.ib()
+    rule = attr.ib(
+        validator=attr.validators.in_(QUADRATURES), default="riemman"
+    )
 
-        self.nodes, self.weights, self.rule = _nodes_weights(interval, rule)
+    nodes_ = attr.ib(init=False, repr=False)
+    weights_ = attr.ib(init=False, repr=False)
 
-        self.integrals = ["integral", "dot", "norm", "normalize"]
+    def __attrs_post_init__(self):
+        quadrature = QUADRATURES[self.rule]
+        nodes, weights = quadrature(self.interval)
+
+        super().__setattr__("nodes_", nodes)
+        super().__setattr__("weights_", weights)
 
     def integral(self, f):
         """Integral of a function."""
-        return np.dot(self.weights, f)
+        return np.dot(self.weights_, f)
 
     def dot(self, f, g):
         """Dot product between a function f and an array of functions g."""
-        return np.dot(self.weights, (f.conjugate() * g).transpose())
+        return np.dot(self.weights_, (f.conjugate() * g).transpose())
 
     def norm(self, f):
         """Norm of function."""
         f_euclid = (f.conjugate() * f).transpose().real
-        return np.sqrt(np.dot(self.weights, f_euclid))
+        return np.sqrt(np.dot(self.weights_, f_euclid))
 
     def normalize(self, f):
         """Normalize a function."""

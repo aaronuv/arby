@@ -31,7 +31,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 arby_init_path = os.path.join(BASE_DIR, "arby", "__init__.py")
 
-REQUIREMENTS = ["numpy", "scipy"]
+REQUIREMENTS = ["attrs", "numpy", "scipy"]
 
 
 with open("README.md", "r") as f:
@@ -41,7 +41,7 @@ with open("README.md", "r") as f:
 with open(arby_init_path, "r") as f:
     for line in f:
         if line.startswith("__version__"):
-            _, _, ARBY_VERSION = line.replace('"', "").split()
+            ARBY_VERSION = line.replace('"', "").split()[-1]
             break
 
 
