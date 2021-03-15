@@ -15,74 +15,64 @@ import numpy as np
 ###################
 
 
-def _nodes_weights(interval=None, rule=None):
-    """Build nodes and weights."""
-    # Validate inputs
-    if interval is None:
-        raise ValueError("`interval` must be provided.")
-    if type(rule) is not str:
-        raise TypeError("Input `rule` must be a string.")
+def riemann_quadrature(interval):
+    """Uniform Riemann quadrature.
 
+    Parameters
+    ----------
+    interval: numpy.ndarray
+        The set of points on which define the quadrature.
+
+    Returns
+    -------
+    nodes: numpy.ndarray
+        Quadrature nodes.
+    weights: numpy.ndarray
+        Quadrature weights.
+
+    """
+    n = interval.shape[0]
+    a = interval.min()
+    b = interval.max()
+    weights = np.ones(n, dtype="double")
+    weights[-1] = 0.0
+    nodes = interval
+    return [nodes, (b - a) / (n - 1) * weights]
+
+
+def trapezoidal_quadrature(interval):
+    """Uniform trapezoidal quadrature."""
+    n = interval.shape[0]
+    a = interval.min()
+    b = interval.max()
+    weights = np.ones(n, dtype="double")
+    weights[0] = 0.5
+    weights[-1] = 0.5
+    nodes = interval
+    return [nodes, (b - a) / (n - 1) * weights]
+
+
+QUADRATURES = {
+    "riemann": riemann_quadrature,
+    "trapezoidal": trapezoidal_quadrature,
+}
+
+
+def _nodes_weights(interval, rule):
+    """Build nodes and weights."""
+
+    quadrature = QUADRATURES.get(rule)
     # Generate requested quadrature rule
-    if rule in ["riemann", "trapezoidal"]:
-        all_nodes, all_weights = Quadratures()[rule](interval)
-    else:
+    if quadrature is None:
         raise ValueError(f"Requested quadrature rule ({rule}) not available.")
+
+    all_nodes, all_weights = quadrature(interval)
     return all_nodes, all_weights, rule
 
 
 ##############################
 # Class for quadrature rules #
 ##############################
-
-
-class Quadratures:
-    """Quadrature rules class."""
-
-    def __init__(self):
-        self._dict = {
-            "riemann": self._riemann,
-            "trapezoidal": self._trapezoidal,
-        }
-
-    def __getitem__(self, rule):
-        """Get the quadrature rule."""
-        return self._dict[rule]
-
-    def _riemann(self, interval):
-        """Uniform Riemann quadrature.
-
-        Parameters
-        ----------
-        interval: numpy.ndarray
-            The set of points on which define the quadrature.
-
-        Returns
-        -------
-        nodes: numpy.ndarray
-            Quadrature nodes.
-        weights: numpy.ndarray
-            Quadrature weights.
-
-        """
-        n = interval.shape[0]
-        a = interval.min()
-        b = interval.max()
-        weights = np.ones(n, dtype="double")
-        weights[-1] = 0.0
-        nodes = interval
-        return [nodes, (b - a) / (n - 1) * weights]
-
-    def _trapezoidal(self, interval):
-        """Uniform trapezoidal quadrature."""
-        n = interval.shape[0]
-        a = interval.min()
-        b = interval.max()
-        weights = np.ones(n, dtype="double")
-        weights[0] = 0.5
-        weights[-1] = 0.5
-        nodes = interval
-        return [nodes, (b - a) / (n - 1) * weights]
 
 
 class Integration:

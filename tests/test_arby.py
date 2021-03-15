@@ -160,17 +160,16 @@ class TestArby_core(unittest.TestCase):
 
 
 class TestArby_Integrals(unittest.TestCase):
+
     def test_Integration_inputs(self):
         """Test rule input."""
+
         with self.assertRaises(ValueError):
             interval = np.linspace(0, 1, 101)
             rule = "fake_rule"
             arby.integrals.Integration(interval=interval, rule=rule)
+
         with self.assertRaises(ValueError):
-            interval = None
-            rule = "riemann"
-            arby.integrals.Integration(interval=interval, rule=rule)
-        with self.assertRaises(TypeError):
             interval = np.linspace(0, 1, 101)
             rule = 1 / 137
             arby.integrals.Integration(interval=interval, rule=rule)
