@@ -8,7 +8,7 @@
 
 import logging
 
-# import attr
+import attr
 
 import numpy as np
 

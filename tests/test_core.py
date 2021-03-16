@@ -56,11 +56,14 @@ def test_alter_Nsamples(training):
 def test_basis_shape():
     """Test correct shape for reduced basis."""
     npoints = 101
+
     # Sample parameter nu and physical variable x
     nu = np.linspace(0, 10, num=npoints)
     x = np.linspace(0, 1, 101)
+
     # build traning space
     training = np.array([BesselJ(nn, x) for nn in nu])
+
     # build reduced basis
     bessel = arby.ReducedOrderModel(training, x, greedy_tol=1e-12)
 
@@ -93,8 +96,10 @@ def test_surrogate_accuracy():
     nu_train = np.linspace(1, 10, num=npoints)
     nu_validation = np.linspace(1, 10, num=1001)
     x = np.linspace(0, 1, 1001)
+
     # build traning space
     training = np.array([BesselJ(nn, x) for nn in nu_train])
+
     # build reduced basis
     bessel = arby.ReducedOrderModel(
         training_space=training,
@@ -113,7 +118,7 @@ def test_surrogate_accuracy():
 def test_gram_schmidt():
     """Test Gram Schmidt orthonormalization algorithm."""
     expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
-    nbasis, npoints = expected_basis.shape
+
     x = np.linspace(0, 1, 101)
     integration = arby.Integration(interval=x, rule="riemann")
     computed_basis = arby.gram_schmidt(expected_basis, integration)
@@ -125,7 +130,7 @@ def test_gram_schmidt():
 
 def test_gram_schmidt_linear_independence():
     expected_basis = np.loadtxt("tests/bessel/bessel_basis.txt")
-    nbasis, npoints = expected_basis.shape
+
     x = np.linspace(0, 1, 101)
     integration = arby.Integration(interval=x, rule="riemann")
 
