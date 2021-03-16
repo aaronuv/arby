@@ -21,7 +21,7 @@ from .integrals import Integration
 
 
 # Set debbuging variable. Don't have actual implementation
-_logger = logging.getLogger()
+logger = logging.getLogger("arby.core")
 
 
 # ===================================
@@ -73,8 +73,10 @@ def gram_schmidt(functions, integration, max_iter=3):
         raise ValueError("Functions are not linearly independent.")
 
     ortho_basis = []
+
     # First element of the basis is special, it's just normalized
     ortho_basis.append(integration.normalize(functions[0]))
+
     # For the rest of basis elements add them one by one by extending basis
     for new_basis_elem in functions[1:]:
         projected_element, _ = _gs_one_element(
@@ -312,7 +314,7 @@ class ReducedOrderModel:
         sigma = self.greedy_errors[0]
 
         # ====== Start greedy loop ======
-        _logger.debug("\n Step", "\t", "Error")
+        logger.debug("\n Step", "\t", "Error")
         nn = 0
         while sigma > self.greedy_tol:
             nn += 1
@@ -339,7 +341,7 @@ class ReducedOrderModel:
 
             sigma = errs[next_index]
 
-            _logger.debug(nn, "\t", sigma)
+            logger.debug(nn, "\t", sigma)
         # Prune excess allocated entries
         self._prune(nn + 1)
         self._basis = self._basis[: nn + 1]
@@ -372,7 +374,7 @@ class ReducedOrderModel:
         first_node = np.argmax(np.abs(self.basis[0]))
         nodes.append(first_node)
 
-        _logger.debug(first_node)
+        logger.debug(first_node)
 
         for i in range(1, self.Nbasis_):
             v_matrix = self._next_vandermonde(nodes, v_matrix)
@@ -383,7 +385,7 @@ class ReducedOrderModel:
             residual = self.basis[i] - basis_interpolant
             new_node = np.argmax(abs(residual))
 
-            _logger.debug(new_node)
+            logger.debug(new_node)
             nodes.append(new_node)
 
         v_matrix = np.array(self._next_vandermonde(nodes, v_matrix))
@@ -489,6 +491,7 @@ class ReducedOrderModel:
         new_node = nodes[-1]
         for i in range(n):
             vandermonde[i].append(self.basis[i, new_node])
+
         vertical_vector = [self.basis[n, nodes[j]] for j in range(n)]
         vertical_vector.append(self.basis[n, new_node])
         vandermonde.append(vertical_vector)
