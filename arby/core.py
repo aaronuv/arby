@@ -14,7 +14,7 @@ import numpy as np
 
 from scipy.interpolate import splev, splrep
 
-from .integrals import Integration
+from .integrals import Integration, QUADRATURES
 
 
 # ================
@@ -121,7 +121,8 @@ def _gs_one_element(h, basis, integration, max_iter=3):
 # Class for Reduced Order Modeling
 # =================================
 
-# @attr.s()
+
+@attr.s()
 class ReducedOrderModel:
     """Build reduced order models from training data.
 
@@ -191,21 +192,55 @@ class ReducedOrderModel:
     control the precision of the reduced basis or the spline model.
     """
 
-    def __init__(
-        self,
-        training_space=None,
-        physical_interval=None,
-        parameter_interval=None,
-        basis=None,
-        integration_rule="riemann",
-        greedy_tol=1e-12,
-        poly_deg=3,
-    ):
-        # Check non empty inputs with the aim of build a reduced order model
-        if training_space is not None and physical_interval is not None:
-            self.training_space = np.asarray(training_space)
-            self.Ntrain_, self.Nsamples_ = self.training_space.shape
-            self.physical_interval = np.asarray(physical_interval)
+    training_space: np.ndarray = attr.ib(
+        default=None, converter=attr.converters.optional(np.asarray)
+    )
+    physical_interval: np.ndarray = attr.ib(
+        default=None, converter=attr.converters.optional(np.asarray)
+    )
+    parameter_interval: np.ndarray = attr.ib(
+        default=None, converter=attr.converters.optional(np.asarray)
+    )
+
+    integration_rule: str = attr.ib(
+        default="riemann", validator=attr.validators.in_(QUADRATURES)
+    )
+    greedy_tol: float = attr.ib(default=1e-12)
+    poly_deg: int = attr.ib(default=3)
+
+    _basis: np.ndarray = attr.ib(default=None)
+
+    _spline_model = attr.ib(default=None, init=False)
+
+    Ntrain_: int = attr.ib(init=False)
+    Nsamples_: int = attr.ib(init=False)
+    integration_: Integration = attr.ib(init=False)
+
+    @Ntrain_.default
+    def _Ntrain__default(self):
+        if self.training_space is not None:
+            return self.training_space.shape[0]
+
+    @Nsamples_.default
+    def _Nsamples__default(self):
+        if self.training_space is not None:
+            return self.training_space.shape[1]
+
+    @integration_.default
+    def _integration__default(self):
+        if (
+            self.training_space is not None
+            and self.physical_interval is not None  # noqa: W503
+        ):
+            return Integration(
+                interval=self.physical_interval, rule=self.integration_rule
+            )
+
+    def __attrs_post_init__(self):  # noqa all the complex validators
+        if (
+            self.training_space is not None
+            and self.physical_interval is not None  # noqa: W503
+        ):
             if self.Ntrain_ > self.Nsamples_:
                 raise ValueError(
                     "Number of samples must be greater than "
@@ -216,22 +251,12 @@ class ReducedOrderModel:
                     "Number of samples for each training function must be "
                     "equal to number of physical points."
                 )
-            if parameter_interval is not None:
-                self.parameter_interval = np.asarray(parameter_interval)
+            if self.parameter_interval is not None:
                 if self.Ntrain_ != self.parameter_interval.size:
                     raise ValueError(
                         "Number of training functions must be "
                         "equal to number of parameter points."
                     )
-
-            self.integration_ = Integration(
-                interval=self.physical_interval, rule=integration_rule
-            )
-        self.greedy_tol = greedy_tol
-        self.poly_deg = poly_deg
-        self._basis = basis
-        # Initialize spline model for later surrogate calls
-        self._spline_model = None
 
     # ==== Reduced Basis Method ===============================================
 
