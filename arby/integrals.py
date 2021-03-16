@@ -45,7 +45,7 @@ def riemann_quadrature(interval):
     weights = np.ones(n, dtype="double")
     weights[-1] = 0.0
     nodes = interval
-    return [nodes, (b - a) / (n - 1) * weights]
+    return nodes, (b - a) / (n - 1) * weights
 
 
 def trapezoidal_quadrature(interval):
@@ -57,7 +57,7 @@ def trapezoidal_quadrature(interval):
     weights[0] = 0.5
     weights[-1] = 0.5
     nodes = interval
-    return [nodes, (b - a) / (n - 1) * weights]
+    return nodes, (b - a) / (n - 1) * weights
 
 
 QUADRATURES = {
@@ -91,7 +91,7 @@ class Integration:
     nodes_ = attr.ib(init=False, repr=False)
     weights_ = attr.ib(init=False, repr=False)
 
-    def __attrs_post_init__(self):  # noqa  to skip pydocstyle in the method
+    def __attrs_post_init__(self):  # noqa to skip pydocstyle in the method
         quadrature = QUADRATURES[self.rule]
         nodes, weights = quadrature(self.interval)
 

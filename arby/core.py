@@ -8,6 +8,8 @@
 
 import logging
 
+# import attr
+
 import numpy as np
 
 from scipy.interpolate import splev, splrep
@@ -119,7 +121,7 @@ def _gs_one_element(h, basis, integration, max_iter=3):
 # Class for Reduced Order Modeling
 # =================================
 
-
+# @attr.s()
 class ReducedOrderModel:
     """Build reduced order models from training data.
 
@@ -152,20 +154,12 @@ class ReducedOrderModel:
 
     Attributes
     ----------
-    training_space: numpy.ndarray
-        Training functions.
-    Ntrain: int
+    Ntrain_: int
         Number of training functions or parameter points.
-    Nsamples: int
+    Nsamples_: int
         Number of sample or physical points.
-    physical_interval: numpy.ndarray
-        Sample points.
-    parameter_interval: numpy.ndarray
-        Parameter points.
-    integration: arby.integrals.Integration
+    integration_: arby.integrals.Integration
         Instance of the `Integration` class.
-    greedy_tol = float
-        The greedy tolerance.
     greedy_indices_: list(int)
         Indices selected by the reduced basis greedy algorithm.
     Nbasis_: int
@@ -210,27 +204,27 @@ class ReducedOrderModel:
         # Check non empty inputs with the aim of build a reduced order model
         if training_space is not None and physical_interval is not None:
             self.training_space = np.asarray(training_space)
-            self.Ntrain, self.Nsamples = self.training_space.shape
+            self.Ntrain_, self.Nsamples_ = self.training_space.shape
             self.physical_interval = np.asarray(physical_interval)
-            if self.Ntrain > self.Nsamples:
+            if self.Ntrain_ > self.Nsamples_:
                 raise ValueError(
                     "Number of samples must be greater than "
                     "number of training functions."
                 )
-            if self.Nsamples != self.physical_interval.size:
+            if self.Nsamples_ != self.physical_interval.size:
                 raise ValueError(
                     "Number of samples for each training function must be "
                     "equal to number of physical points."
                 )
             if parameter_interval is not None:
                 self.parameter_interval = np.asarray(parameter_interval)
-                if self.Ntrain != self.parameter_interval.size:
+                if self.Ntrain_ != self.parameter_interval.size:
                     raise ValueError(
                         "Number of training functions must be "
                         "equal to number of parameter points."
                     )
 
-            self.integration = Integration(
+            self.integration_ = Integration(
                 interval=self.physical_interval, rule=integration_rule
             )
         self.greedy_tol = greedy_tol
@@ -280,23 +274,23 @@ class ReducedOrderModel:
         seed_function = self.training_space[index_seed]
         zero_function = np.zeros_like(seed_function)
         while np.allclose(seed_function, zero_function):
-            index_seed = np.random.randint(1, self.Ntrain)
+            index_seed = np.random.randint(1, self.Ntrain_)
             seed_function = self.training_space[index_seed]
 
         # ====== Seed the greedy algorithm and allocate memory ======
 
         # Validate inputs
-        if self.Nsamples != np.size(self.integration.weights_):
+        if self.Nsamples_ != np.size(self.integration_.weights_):
             raise ValueError(
                 "Number of samples is inconsistent " "with quadrature rule."
             )
 
         # Allocate memory for greedy algorithm arrays
         self._allocate(
-            self.Ntrain, self.Nsamples, dtype=self.training_space.dtype
+            self.Ntrain_, self.Nsamples_, dtype=self.training_space.dtype
         )
 
-        self._norms = self.integration.norm(self.training_space)
+        self._norms = self.integration_.norm(self.training_space)
         # Seed
         self.greedy_indices_ = [index_seed]
         self._basis = np.empty_like(self.training_space)
@@ -304,7 +298,7 @@ class ReducedOrderModel:
             self.training_space[index_seed] / self._norms[index_seed]
         )
         self._basisnorms[0] = self._norms[index_seed]
-        self._proj_matrix[0] = self.integration.dot(
+        self._proj_matrix[0] = self.integration_.dot(
             self._basis[0], self.training_space
         )
 
@@ -330,9 +324,9 @@ class ReducedOrderModel:
             self._basis[nn], self._basisnorms[nn] = _gs_one_element(
                 self.training_space[self.greedy_indices_[nn]],
                 self._basis[:nn],
-                self.integration,
+                self.integration_,
             )
-            self._proj_matrix[nn] = self.integration.dot(
+            self._proj_matrix[nn] = self.integration_.dot(
                 self._basis[nn], self.training_space
             )
             errs = self._loss(self._proj_matrix[: nn + 1], norms=self._norms)
@@ -420,10 +414,11 @@ class ReducedOrderModel:
             self.build_eim()
 
             training_compressed = np.empty(
-                (self.Ntrain, self.basis.size), dtype=self.training_space.dtype
+                (self.Ntrain_, self.basis.size),
+                dtype=self.training_space.dtype,
             )
 
-            for i in range(self.Ntrain):
+            for i in range(self.Ntrain_):
                 for j, node in enumerate(self.eim_nodes_):
                     training_compressed[i, j] = self.training_space[i, node]
 
@@ -465,7 +460,7 @@ class ReducedOrderModel:
             Squared projection errors.
         """
         proj_norms = np.array(
-            [np.linalg.norm(proj_matrix[:, i]) for i in range(self.Ntrain)]
+            [np.linalg.norm(proj_matrix[:, i]) for i in range(self.Ntrain_)]
         )
         proj_errors = norms ** 2 - proj_norms ** 2
         return proj_errors
@@ -516,9 +511,9 @@ class ReducedOrderModel:
         l2_error: float or numpy.array
             Square of the projection error.
         """
-        h_norm = self.integration.norm(h).real
+        h_norm = self.integration_.norm(h).real
         inner_prod = np.array(
-            [self.integration.dot(basis_elem, h) for basis_elem in basis]
+            [self.integration_.dot(basis_elem, h) for basis_elem in basis]
         )
         l2_error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
         return l2_error
@@ -540,7 +535,7 @@ class ReducedOrderModel:
         """
         projected_function = 0.0
         for e in basis:
-            projected_function += e * self.integration.dot(e, h)
+            projected_function += e * self.integration_.dot(e, h)
         return projected_function
 
     def interpolate(self, h):

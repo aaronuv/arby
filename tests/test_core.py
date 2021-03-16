@@ -48,7 +48,7 @@ def test_wrong_Ntrain(training):
 def test_alter_Nsamples(training):
     x = np.linspace(0, 1, 101)
     bessel = arby.ReducedOrderModel(training, x)
-    bessel.Nsamples += 1
+    bessel.Nsamples_ += 1
     with pytest.raises(ValueError):
         bessel.basis
 
