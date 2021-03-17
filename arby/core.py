@@ -315,7 +315,7 @@ class ReducedOrderModel:
         # Allocate memory for greedy algorithm arrays
         greedy_errors = np.empty(self.Ntrain_, dtype="double")
         basisnorms = np.empty(self.Ntrain_, dtype="double")
-        self._proj_matrix = np.empty(
+        proj_matrix = np.empty(
             (self.Ntrain_, self.Ntrain_), dtype=self.training_space.dtype
         )
 
@@ -326,11 +326,11 @@ class ReducedOrderModel:
         self._basis = np.empty_like(self.training_space)
         self._basis[0] = self.training_space[index_seed] / norms[index_seed]
         basisnorms[0] = norms[index_seed]
-        self._proj_matrix[0] = self.integration_.dot(
+        proj_matrix[0] = self.integration_.dot(
             self._basis[0], self.training_space
         )
 
-        errs = self._loss(self._proj_matrix[:1], norms=norms)
+        errs = self._loss(proj_matrix[:1], norms=norms)
         next_index = np.argmax(errs)
         greedy_errors[0] = errs[next_index]
         sigma = greedy_errors[0]
@@ -343,8 +343,8 @@ class ReducedOrderModel:
 
             if next_index in self.greedy_indices_:
                 # Prune excess allocated entries
-                greedy_errors, self._proj_matrix = self._prune(
-                    greedy_errors, self._proj_matrix, nn
+                greedy_errors, proj_matrix = self._prune(
+                    greedy_errors, proj_matrix, nn
                 )
                 self._basis = self._basis[:nn]
                 self.Nbasis_ = nn
@@ -356,10 +356,10 @@ class ReducedOrderModel:
                 self._basis[:nn],
                 self.integration_,
             )
-            self._proj_matrix[nn] = self.integration_.dot(
+            proj_matrix[nn] = self.integration_.dot(
                 self._basis[nn], self.training_space
             )
-            errs = self._loss(self._proj_matrix[: nn + 1], norms=norms)
+            errs = self._loss(proj_matrix[: nn + 1], norms=norms)
             next_index = np.argmax(errs)
             greedy_errors[nn] = errs[next_index]
 
@@ -367,8 +367,8 @@ class ReducedOrderModel:
 
             logger.debug(nn, "\t", sigma)
         # Prune excess allocated entries
-        greedy_errors, self._proj_matrix = self._prune(
-            greedy_errors, self._proj_matrix, nn + 1
+        greedy_errors, proj_matrix = self._prune(
+            greedy_errors, proj_matrix, nn + 1
         )
 
         self._basis = self._basis[: nn + 1]
