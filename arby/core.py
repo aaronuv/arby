@@ -371,9 +371,10 @@ class ReducedOrderModel:
             greedy_errors, self._proj_matrix, nn + 1
         )
 
-        self.greedy_errors = greedy_errors
         self._basis = self._basis[: nn + 1]
+
         self.Nbasis_ = nn + 1
+        self.greedy_errors_ = greedy_errors
         return self._basis
 
     # ====== Empirical Interpolation Method ===================================
