@@ -208,12 +208,15 @@ class ReducedOrderModel:
     greedy_tol: float = attr.ib(default=1e-12)
     poly_deg: int = attr.ib(default=3)
 
-    _basis: np.ndarray = attr.ib(default=None)
+    _basis: np.ndarray = attr.ib(
+        default=None, converter=attr.converters.optional(np.asarray)
+    )
 
     _spline_model = attr.ib(default=None, init=False)
 
     Ntrain_: int = attr.ib(init=False)
     Nsamples_: int = attr.ib(init=False)
+    Nbasis_: int = attr.ib(init=False)
     integration_: Integration = attr.ib(init=False)
 
     @Ntrain_.default
@@ -235,6 +238,11 @@ class ReducedOrderModel:
             return Integration(
                 interval=self.physical_interval, rule=self.integration_rule
             )
+
+    @Nbasis_.default
+    def _Nbasis__default(self):
+        if self._basis is not None:
+            return self._basis.shape[0]
 
     def __attrs_post_init__(self):  # noqa all the complex validators
         if (
@@ -292,8 +300,6 @@ class ReducedOrderModel:
 
         """
         if self._basis is not None:
-            self._basis = np.asarray(self._basis)
-            self.Nbasis_ = self._basis.shape[0]
             return self._basis
 
         # If seed gives a null function, choose a random seed
@@ -322,13 +328,12 @@ class ReducedOrderModel:
         norms = self.integration_.norm(self.training_space)
 
         # Seed
-        self.greedy_indices_ = [index_seed]
-        self._basis = np.empty_like(self.training_space)
-        self._basis[0] = self.training_space[index_seed] / norms[index_seed]
+        greedy_indices = [index_seed]
+        basis = np.empty_like(self.training_space)
+        basis[0] = self.training_space[index_seed] / norms[index_seed]
+
         basisnorms[0] = norms[index_seed]
-        proj_matrix[0] = self.integration_.dot(
-            self._basis[0], self.training_space
-        )
+        proj_matrix[0] = self.integration_.dot(basis[0], self.training_space)
 
         errs = self._loss(proj_matrix[:1], norms=norms)
         next_index = np.argmax(errs)
@@ -341,23 +346,24 @@ class ReducedOrderModel:
         while sigma > self.greedy_tol:
             nn += 1
 
-            if next_index in self.greedy_indices_:
+            if next_index in greedy_indices:
+
                 # Prune excess allocated entries
                 greedy_errors, proj_matrix = self._prune(
                     greedy_errors, proj_matrix, nn
                 )
-                self._basis = self._basis[:nn]
+                self._basis = basis[:nn]
                 self.Nbasis_ = nn
                 return self._basis
 
-            self.greedy_indices_.append(next_index)
-            self._basis[nn], basisnorms[nn] = _gs_one_element(
-                self.training_space[self.greedy_indices_[nn]],
-                self._basis[:nn],
+            greedy_indices.append(next_index)
+            basis[nn], basisnorms[nn] = _gs_one_element(
+                self.training_space[greedy_indices[nn]],
+                basis[:nn],
                 self.integration_,
             )
             proj_matrix[nn] = self.integration_.dot(
-                self._basis[nn], self.training_space
+                basis[nn], self.training_space
             )
             errs = self._loss(proj_matrix[: nn + 1], norms=norms)
             next_index = np.argmax(errs)
@@ -366,15 +372,16 @@ class ReducedOrderModel:
             sigma = errs[next_index]
 
             logger.debug(nn, "\t", sigma)
+
         # Prune excess allocated entries
         greedy_errors, proj_matrix = self._prune(
             greedy_errors, proj_matrix, nn + 1
         )
 
-        self._basis = self._basis[: nn + 1]
-
         self.Nbasis_ = nn + 1
         self.greedy_errors_ = greedy_errors
+        self._basis = basis[: nn + 1]
+
         return self._basis
 
     # ====== Empirical Interpolation Method ===================================
