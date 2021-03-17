@@ -292,8 +292,6 @@ class ReducedOrderModel:
             self.Nbasis_ = self._basis.shape[0]
             return self._basis
 
-        self._loss = self._projection_error
-
         # If seed gives a null function, choose a random seed
         index_seed = 0
         seed_function = self.training_space[index_seed]
@@ -311,23 +309,24 @@ class ReducedOrderModel:
             )
 
         # Allocate memory for greedy algorithm arrays
-        self._allocate(
-            self.Ntrain_, self.Nsamples_, dtype=self.training_space.dtype
+        self.greedy_errors = np.empty(self.Ntrain_, dtype="double")
+        basisnorms = np.empty(self.Ntrain_, dtype="double")
+        self._proj_matrix = np.empty(
+            (self.Ntrain_, self.Ntrain_), dtype=self.training_space.dtype
         )
 
-        self._norms = self.integration_.norm(self.training_space)
+        norms = self.integration_.norm(self.training_space)
+
         # Seed
         self.greedy_indices_ = [index_seed]
         self._basis = np.empty_like(self.training_space)
-        self._basis[0] = (
-            self.training_space[index_seed] / self._norms[index_seed]
-        )
-        self._basisnorms[0] = self._norms[index_seed]
+        self._basis[0] = self.training_space[index_seed] / norms[index_seed]
+        basisnorms[0] = norms[index_seed]
         self._proj_matrix[0] = self.integration_.dot(
             self._basis[0], self.training_space
         )
 
-        errs = self._loss(self._proj_matrix[:1], norms=self._norms)
+        errs = self._loss(self._proj_matrix[:1], norms=norms)
         next_index = np.argmax(errs)
         self.greedy_errors[0] = errs[next_index]
         sigma = self.greedy_errors[0]
@@ -346,7 +345,7 @@ class ReducedOrderModel:
                 return self._basis
 
             self.greedy_indices_.append(next_index)
-            self._basis[nn], self._basisnorms[nn] = _gs_one_element(
+            self._basis[nn], basisnorms[nn] = _gs_one_element(
                 self.training_space[self.greedy_indices_[nn]],
                 self._basis[:nn],
                 self.integration_,
@@ -354,7 +353,7 @@ class ReducedOrderModel:
             self._proj_matrix[nn] = self.integration_.dot(
                 self._basis[nn], self.training_space
             )
-            errs = self._loss(self._proj_matrix[: nn + 1], norms=self._norms)
+            errs = self._loss(self._proj_matrix[: nn + 1], norms=norms)
             next_index = np.argmax(errs)
             self.greedy_errors[nn] = errs[next_index]
 
@@ -468,7 +467,7 @@ class ReducedOrderModel:
 
     # ==== Private methods ====================================================
 
-    def _projection_error(self, proj_matrix, norms):
+    def _loss(self, proj_matrix, norms):
         """Square of projection errors.
 
         Parameters
@@ -489,12 +488,6 @@ class ReducedOrderModel:
         )
         proj_errors = norms ** 2 - proj_norms ** 2
         return proj_errors
-
-    def _allocate(self, Npoints, Nquads, dtype="complex"):
-        """Allocate memory for numpy arrays used for building reduced basis."""
-        self.greedy_errors = np.empty(Npoints, dtype="double")
-        self._basisnorms = np.empty(Npoints, dtype="double")
-        self._proj_matrix = np.empty((Npoints, Npoints), dtype=dtype)
 
     def _prune(self, num):
         """Prune arrays to have size num."""
