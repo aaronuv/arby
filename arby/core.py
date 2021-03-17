@@ -219,6 +219,8 @@ class ReducedOrderModel:
     Nbasis_: int = attr.ib(init=False)
     integration_: Integration = attr.ib(init=False)
 
+    # ==== Attrs orchestration=================================================
+
     @Ntrain_.default
     def _Ntrain__default(self):
         if self.training_space is not None:
@@ -266,11 +268,51 @@ class ReducedOrderModel:
                         "equal to number of parameter points."
                     )
 
-    # ==== Reduced Basis Method ===============================================
+    # ==== Private methods ====================================================
+
+    def _loss(self, proj_matrix, norms):
+        """Square of projection errors.
+
+        Parameters
+        ----------
+        proj_matrix : numpy.ndarray, shape=(n,`Ntrain`)
+            Stores the projection coefficients of the training functions. n
+            is the number of basis elements.
+        norms : numpy.ndarray, shape=(`Ntrain`)
+            Stores the norms of the training functions.
+
+        Returns
+        -------
+        proj_errors : numpy.ndarray, shape=(`Ntrain`)
+            Squared projection errors.
+        """
+        proj_norms = np.array(
+            [np.linalg.norm(proj_matrix[:, i]) for i in range(self.Ntrain_)]
+        )
+        proj_errors = norms ** 2 - proj_norms ** 2
+        return proj_errors
+
+    def _next_vandermonde(self, nodes, vandermonde=None):
+        """Build the next Vandermonde matrix from the previous one."""
+        if vandermonde is None:
+            vandermonde = [[self.basis[0, nodes[0]]]]
+            return vandermonde
+
+        n = len(vandermonde)
+        new_node = nodes[-1]
+        for i in range(n):
+            vandermonde[i].append(self.basis[i, new_node])
+
+        vertical_vector = [self.basis[n, nodes[j]] for j in range(n)]
+        vertical_vector.append(self.basis[n, new_node])
+        vandermonde.append(vertical_vector)
+        return vandermonde
 
     def _prune(self, greedy_errors, proj_matrix, num):
         """Prune arrays to have size num."""
         return greedy_errors[:num], proj_matrix[:num]
+
+    # ==== Reduced Basis Method ===============================================
 
     @property
     def basis(self):
@@ -482,46 +524,6 @@ class ReducedOrderModel:
         h_surrogate = self.interpolant_ @ h_surr_at_nodes
 
         return h_surrogate
-
-    # ==== Private methods ====================================================
-
-    def _loss(self, proj_matrix, norms):
-        """Square of projection errors.
-
-        Parameters
-        ----------
-        proj_matrix : numpy.ndarray, shape=(n,`Ntrain`)
-            Stores the projection coefficients of the training functions. n
-            is the number of basis elements.
-        norms : numpy.ndarray, shape=(`Ntrain`)
-            Stores the norms of the training functions.
-
-        Returns
-        -------
-        proj_errors : numpy.ndarray, shape=(`Ntrain`)
-            Squared projection errors.
-        """
-        proj_norms = np.array(
-            [np.linalg.norm(proj_matrix[:, i]) for i in range(self.Ntrain_)]
-        )
-        proj_errors = norms ** 2 - proj_norms ** 2
-        return proj_errors
-
-    def _next_vandermonde(self, nodes, vandermonde=None):
-        """Build the next Vandermonde matrix from the previous one."""
-        if vandermonde is None:
-            vandermonde = [[self.basis[0, nodes[0]]]]
-            return vandermonde
-
-        n = len(vandermonde)
-        new_node = nodes[-1]
-        for i in range(n):
-            vandermonde[i].append(self.basis[i, new_node])
-
-        vertical_vector = [self.basis[n, nodes[j]] for j in range(n)]
-        vertical_vector.append(self.basis[n, new_node])
-        vandermonde.append(vertical_vector)
-        return vandermonde
 
     # ==== Validation methods =================================================
 
