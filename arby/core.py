@@ -260,6 +260,12 @@ class ReducedOrderModel:
 
     # ==== Reduced Basis Method ===============================================
 
+    def _prune(self, greedy_errors, proj_matrix, num):
+        """Prune arrays to have size num."""
+        # self.greedy_errors = self.greedy_errors[:num]
+        # self._proj_matrix = self._proj_matrix[:num]
+        return greedy_errors[:num], proj_matrix[:num]
+
     @property
     def basis(self):
         """Array of basis elements.
@@ -339,7 +345,7 @@ class ReducedOrderModel:
 
             if next_index in self.greedy_indices_:
                 # Prune excess allocated entries
-                self._prune(nn)
+                self.greedy_errors, self._proj_matrix = self._prune(self.greedy_errors, self._proj_matrix, nn)
                 self._basis = self._basis[:nn]
                 self.Nbasis_ = nn
                 return self._basis
@@ -361,7 +367,7 @@ class ReducedOrderModel:
 
             logger.debug(nn, "\t", sigma)
         # Prune excess allocated entries
-        self._prune(nn + 1)
+        self.greedy_errors, self._proj_matrix = self._prune(self.greedy_errors, self._proj_matrix, nn+1)
         self._basis = self._basis[: nn + 1]
         self.Nbasis_ = nn + 1
         return self._basis
@@ -488,11 +494,6 @@ class ReducedOrderModel:
         )
         proj_errors = norms ** 2 - proj_norms ** 2
         return proj_errors
-
-    def _prune(self, num):
-        """Prune arrays to have size num."""
-        self.greedy_errors = self.greedy_errors[:num]
-        self._proj_matrix = self._proj_matrix[:num]
 
     def _next_vandermonde(self, nodes, vandermonde=None):
         """Build the next Vandermonde matrix from the previous one."""
