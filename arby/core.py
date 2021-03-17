@@ -262,8 +262,6 @@ class ReducedOrderModel:
 
     def _prune(self, greedy_errors, proj_matrix, num):
         """Prune arrays to have size num."""
-        # self.greedy_errors = self.greedy_errors[:num]
-        # self._proj_matrix = self._proj_matrix[:num]
         return greedy_errors[:num], proj_matrix[:num]
 
     @property
@@ -315,7 +313,7 @@ class ReducedOrderModel:
             )
 
         # Allocate memory for greedy algorithm arrays
-        self.greedy_errors = np.empty(self.Ntrain_, dtype="double")
+        greedy_errors = np.empty(self.Ntrain_, dtype="double")
         basisnorms = np.empty(self.Ntrain_, dtype="double")
         self._proj_matrix = np.empty(
             (self.Ntrain_, self.Ntrain_), dtype=self.training_space.dtype
@@ -334,8 +332,8 @@ class ReducedOrderModel:
 
         errs = self._loss(self._proj_matrix[:1], norms=norms)
         next_index = np.argmax(errs)
-        self.greedy_errors[0] = errs[next_index]
-        sigma = self.greedy_errors[0]
+        greedy_errors[0] = errs[next_index]
+        sigma = greedy_errors[0]
 
         # ====== Start greedy loop ======
         logger.debug("\n Step", "\t", "Error")
@@ -345,7 +343,9 @@ class ReducedOrderModel:
 
             if next_index in self.greedy_indices_:
                 # Prune excess allocated entries
-                self.greedy_errors, self._proj_matrix = self._prune(self.greedy_errors, self._proj_matrix, nn)
+                greedy_errors, self._proj_matrix = self._prune(
+                    greedy_errors, self._proj_matrix, nn
+                )
                 self._basis = self._basis[:nn]
                 self.Nbasis_ = nn
                 return self._basis
@@ -361,13 +361,17 @@ class ReducedOrderModel:
             )
             errs = self._loss(self._proj_matrix[: nn + 1], norms=norms)
             next_index = np.argmax(errs)
-            self.greedy_errors[nn] = errs[next_index]
+            greedy_errors[nn] = errs[next_index]
 
             sigma = errs[next_index]
 
             logger.debug(nn, "\t", sigma)
         # Prune excess allocated entries
-        self.greedy_errors, self._proj_matrix = self._prune(self.greedy_errors, self._proj_matrix, nn+1)
+        greedy_errors, self._proj_matrix = self._prune(
+            greedy_errors, self._proj_matrix, nn + 1
+        )
+
+        self.greedy_errors = greedy_errors
         self._basis = self._basis[: nn + 1]
         self.Nbasis_ = nn + 1
         return self._basis
