@@ -80,46 +80,46 @@ parameter set. For instance, :math:`\nu = 4.30`.
 
 As we can see, the surrogate model predicts quite well the Bessel function.
 We can test the accuracy of our model in a precise sense by using the integration tools
-of Arby. We take as a metric the :math:`L_2`-norm of the difference between the two
+of Arby. We take as a metric the relative error given by :math:`L_2`-norm of the difference between the two
 models.
 
 .. math::
 
-    e(\nu)^2 = \| J_\nu - J_\nu^{sur} \|^2 = \int_{[a,b]} |J_\nu(x) - J_\nu^{sur}(x)|^2 dx
+    e(\nu)^2 := \frac{\| J_\nu - J_\nu^{sur} \|^2}{\| J_\nu \|^2}
+
+donde
+
+.. math::
+
+    \|J_\nu\|^2 := \int_{[a,b]} |J_\nu(x)|^2 dx 
 
 We compute this for an arbitrary parameter ``par`` simply by calling the ``integration``
 object defined inside the ``bessel_model``. This object comprises quadrature rules
 to define an integration scheme.
 ::
 
-        L2_error = bessel_model.integration.norm(BesselJ(par, x) - bessel_par)
+        norm = bessel_model.integration.norm
+        L2_error = norm(BesselJ(par, x) - bessel_par)/norm(BesselJ(par, x))
 
-For instance, for ``par = 4.30`` it gives ``L2_error = 1.1533694546001233e-06``. Let us compute
-a benchmark for the entire parameter interval with a dense sampling ``nu_val`` for
-validation.
+For ``par = 4.30`` it gives ``L2_error = 1.0434605267845736e-06``. Let us compute
+a validation benchmark for a dense parameter interval ``nu_val``.
 ::
 
         # discretization 10X more dense than `nu`
         nu_val = np.linspace(1, 5, num=npoints*10)
 
         # compute errors for `nu_eval`
-        errors = errors = [
-                 bessel_model.integration.norm(BesselJ(par, x) - bessel_model.surrogate(par))
-                 for par in nu_val
-                          ]
+        errors = np.array(
+            [norm(BesselJ(par, x) - bessel.surrogate(par))/norm(BesselJ(par, x))
+            for par in nu_val]
+            )
 
-        # plot
-        fig = plt.figure(figsize=(8,3))
-        plt.semilogy(nu_val, errors, lw=1.5)
-        plt.xlabel('$\\nu$')
-        plt.ylabel('$L_2$ errors')
-        plt.title('Validation errors')
-        plt.show()
+Plot ``errors`` vs ``nu_val``.
 
 .. image:: _static/errors.png
-    :width: 500px
+    :width: 600px
     :align: center
-    :height: 200px
+    :height: 300px
     :alt: bessel errors
 
 As we can see, the maximum error is about :math:`\sim` 1e-6 or, squared, :math:`\sim` 1e-12,
@@ -139,7 +139,7 @@ If we want to improve the accuracy, we just tune the ``greedy_tol`` and/or the `
 parameters at the moment of generate the ``bessel_model`` object. For example,
 ::
 
-        # create a model
+        # create the model
         bessel_model = ROM(training_space=training,
                            physical_interval=x,
                            parameter_interval=nu,
@@ -149,9 +149,9 @@ parameters at the moment of generate the ``bessel_model`` object. For example,
 Next, we try the same benchmark as before, but now for the new model, obtaining
 
 .. image:: _static/errors_improved.png
-    :width: 500px
+    :width: 600px
     :align: center
-    :height: 200px
+    :height: 300px
     :alt: bessel errors improvement
 
 This time, the squared maximum error is about :math:`\sim` 1e-16!
