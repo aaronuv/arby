@@ -41,8 +41,12 @@ with open(os.path.join("..", "..", "arby", "__init__.py"), "r") as f:
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "nbsphinx"
+    "nbsphinx",
+    "sphinx.ext.mathjax",
+    "sphinx-copybutton"
     ]
+
+highlight_language = 'none'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
