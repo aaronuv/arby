@@ -42,6 +42,7 @@ technique for reducing the computational complexity of mathematical models in nu
    installation
    tutorial
    api
+   pendulum
 
 Quick Usage
 ===========
