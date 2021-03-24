@@ -160,10 +160,13 @@ This time, the squared maximum error is about :math:`\sim` 1e-16!
 Build a reduced basis
 ^^^^^^^^^^^^^^^^^^^^^
 
-Lets go deeper. The Reduced Basis Method (RBM) [1]_ is a reduced order modeling technique to find a
-cuasi-optimal basis of functions capable of span the entire training set with an user specified tolerance.
-The approach is through projections, say, we need to define an inner product to perform projections
-and construct the approximation.
+Lets go deeper. The Reduced Basis Method [1]_ is a reduced order modeling technique for building a
+near-optimal basis of functions that spans the training set at an user-specified tolerance. 
+The basis is built by interatively choosing those training functions that best represent the entire set.
+In this way, as opposed to other dimensional reduction techniques such as Proper Orthogonal Decomposition,
+the reduced basis is directly interpretable since it is built out from training functions. Another kindness
+of this approach is that whenever we want more accuracy we just add more basis elements to the computed one.
+The construction is hierarcuical.
 
 Suppose we have a training set :math:`\{f_{\lambda_i}\}_{i=1}^N` of parameterized real
 functions. This set may represent a non-linear model, perhaps solution of PDEs. We would
