@@ -480,7 +480,7 @@ class ReducedOrderModel:
         This is done only once, at the first function call. For subsequent
         calls, the method invokes the spline model built at the first call and
         evaluates. The output is an array storing the surrogate function/s at
-        that/those parameter/s with the lenght of the original physical
+        that/those parameter/s with the length of the original physical
         interval sampling.
 
         Parameters
