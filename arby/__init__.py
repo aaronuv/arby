@@ -11,5 +11,5 @@ __version__ = "0.2.0"
 
 __all__ = ["Integration", "ReducedOrderModel", "gram_schmidt"]
 
-from .core import ReducedOrderModel, gram_schmidt
 from .integrals import Integration
+from .rom import ReducedOrderModel, gram_schmidt
