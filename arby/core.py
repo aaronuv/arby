@@ -131,7 +131,7 @@ class ReducedOrderModel:
     space of functions. The underlying model g(v,x) describing the training
     space is a real function parameterized by v called the *training*
     parameter. The dual variable x, called the *physical* variable, belongs
-    to the domain in which an inner product is defined. bla
+    to the domain in which an inner product is defined.
 
     Parameters
     ----------
