@@ -25,17 +25,27 @@ from scipy.special import jv as BesselJ
 def test_basis_shape(basis_data, physical_interval):
     integration = arby.Integration(physical_interval)
     basis = arby.Basis(basis_data, integration)
+
     assert basis.Nbasis_ == len(basis_data)
 
 
 def test_eim(basis_data, physical_interval):
     integration = arby.Integration(physical_interval)
     basis = arby.Basis(basis_data, integration)
+
     np.testing.assert_allclose(basis.eim_.interpolant.mean(), 0.1)
     np.testing.assert_allclose(basis.eim_.interpolant.std(), 0.345161095)
     np.testing.assert_array_equal(
         basis.eim_.nodes, [0, 100, 2, 36, 9, 72, 1, 20, 89, 4]
     )
+
+
+def test_projection_error(basis_data, physical_interval):
+    integration = arby.Integration(physical_interval)
+    basis = arby.Basis(basis_data, integration)
+
+    perror = basis.projection_error(physical_interval)
+    np.testing.assert_almost_equal(perror, 0, decimal=10)
 
 
 def test_project(basis_data, physical_interval):
@@ -93,7 +103,7 @@ def test_projectors():
 
 
 @pytest.mark.xfail
-def test_projection_error():
+def test_projection_error_consistency():
     """Test auto-consistency for projection error function."""
     npoints = 101
     nu_train = np.linspace(1, 10, num=npoints)

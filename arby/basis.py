@@ -21,8 +21,11 @@ from .integrals import Integration
 # ================
 
 if hasattr(functools, "cached_property"):
+
     cached_property = functools.cached_property
+
 else:
+
     def cached_property(func):  # pragma: no cover
         """Workaround for functools.cached_property for Python < 3.8."""
         cache = functools.lru_cache(maxsize=None)
@@ -137,7 +140,7 @@ class Basis:
 
         return EIM(interpolant=interpolant, nodes=nodes)
 
-    def projection_error(self, h, basis):
+    def projection_error(self, h):
         """Square of the projection error of a function onto a basis.
 
         The error is computed in the L2 norm.
@@ -156,7 +159,7 @@ class Basis:
         """
         h_norm = self.integration.norm(h).real
         inner_prod = np.array(
-            [self.integration.dot(basis_elem, h) for basis_elem in basis]
+            [self.integration.dot(basis_elem, h) for basis_elem in self.data]
         )
         l2_error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
         return l2_error
