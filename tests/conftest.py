@@ -31,12 +31,23 @@ BESSEL_PATH = PATH / "bessel"
 
 
 @pytest.fixture
-def basis():
+def basis_data():
     path = BESSEL_PATH / "bessel_basis.txt"
     return np.loadtxt(path)
 
 
 @pytest.fixture
+def basis(basis_data):
+    return basis_data
+
+
+@pytest.fixture
 def training():
     path = BESSEL_PATH / "bessel_training.txt"
+    return np.loadtxt(path)
+
+
+@pytest.fixture
+def physical_interval():
+    path = BESSEL_PATH / "physical_interval.txt"
     return np.loadtxt(path)

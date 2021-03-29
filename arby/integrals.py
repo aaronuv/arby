@@ -70,6 +70,7 @@ QUADRATURES = {
 # Class for quadrature rules
 # =============================================================================
 
+
 @attr.s(frozen=True)
 class Integration:
     """Comprise an integration scheme.
@@ -85,7 +86,7 @@ class Integration:
 
     interval = attr.ib()
     rule = attr.ib(
-        validator=attr.validators.in_(QUADRATURES), default="riemman"
+        validator=attr.validators.in_(QUADRATURES), default="riemann"
     )
 
     nodes_ = attr.ib(init=False, repr=False)
