@@ -68,6 +68,25 @@ def test_interpolate(basis_data, physical_interval):
     )
 
 
+def test_port(training):
+    x = np.linspace(0, 1, 101)
+    bessel = arby.ReducedOrderModel(training, x)
+    bessel.build_eim()
+
+    original_basis = bessel.basis
+    original_error = bessel.greedy_errors_
+    original_eim_nodes = bessel.eim_nodes_
+    original_interpolant = bessel.interpolant_
+
+    basis, error = arby.reduce_basis(
+        bessel.training_space, bessel.physical_interval)
+
+    assert np.all(basis.data == original_basis)
+    assert np.all(error == original_error)
+    assert np.all(basis.eim_.nodes == original_eim_nodes)
+    assert np.all(basis.eim_.interpolant == original_interpolant)
+
+
 @pytest.mark.xfail
 def test_projectors():
     """Test that projectors works as true projectors."""

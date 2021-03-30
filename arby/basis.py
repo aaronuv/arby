@@ -102,7 +102,7 @@ class Basis:
         return vandermonde
 
     @cached_property
-    def eim_(self):
+    def eim_(self) -> EIM:
         """Empirical Interpolantion matrix.
 
         Implement the Empirical Interpolation Method [field2014fast]_ to select
@@ -264,7 +264,6 @@ def _prune(greedy_errors, proj_matrix, num):  # pragma: no cover
 def reduce_basis(
     training_space,
     physical_interval,
-    parameter_interval,
     integration_rule="riemann",
     greedy_tol=1e-12,
 ) -> tuple:  # pragma: no cover
