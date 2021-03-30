@@ -9,8 +9,14 @@
 
 __version__ = "0.2.0"
 
-__all__ = ["Basis", "Integration", "ReducedOrderModel", "gram_schmidt"]
+__all__ = [
+    "Basis",
+    "Integration",
+    "ReducedOrderModel",
+    "gram_schmidt",
+    "reduce_basis",
+]
 
-from .basis import Basis
+from .basis import Basis, reduce_basis
 from .integrals import Integration
 from .rom import ReducedOrderModel, gram_schmidt

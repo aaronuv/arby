@@ -74,6 +74,7 @@ class Basis:
     integration: np.ndarray = attr.ib(
         validator=attr.validators.instance_of(Integration)
     )
+
     Nbasis_: int = attr.ib(init=False)
 
     # ==== Attrs orchestration=================================================
@@ -198,3 +199,173 @@ class Basis:
         h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_.nodes])
         h_interpolated = self.eim_.interpolant @ h_at_nodes
         return h_interpolated
+
+
+# =============================================================================
+# FUNCTIONS
+# =============================================================================
+
+
+def _gs_one_element(h, basis, integration, max_iter=3):  # pragma: no cover
+    """Orthonormalize a function against an orthonormal basis."""
+    norm = integration.norm(h)
+    e = h / norm
+
+    n_iters = 0
+    continue_loop = True
+    while continue_loop:
+        for b in basis:
+            e -= b * integration.dot(b, e)
+        new_norm = integration.norm(e)
+
+        a = 0.5
+        if new_norm / norm <= a:
+            norm = new_norm
+            n_iters += 1
+            if n_iters > max_iter:
+                raise StopIteration(
+                    "Gram-Schmidt algorithm: max number of "
+                    "iterations reached ({}).".format(max_iter)
+                )
+        else:
+            continue_loop = False
+
+    return e / new_norm, new_norm
+
+
+def _sq_prog_errors(proj_matrix, norms, Ntrain):  # pragma: no cover
+    """Square of projection errors.
+
+    Parameters
+    ----------
+    proj_matrix : numpy.ndarray, shape=(n,`Ntrain`)
+        Stores the projection coefficients of the training functions. n
+        is the number of basis elements.
+    norms : numpy.ndarray, shape=(`Ntrain`)
+        Stores the norms of the training functions.
+
+    Returns
+    -------
+    proj_errors : numpy.ndarray, shape=(`Ntrain`)
+        Squared projection errors.
+    """
+    proj_norms = np.array(
+        [np.linalg.norm(proj_matrix[:, i]) for i in range(Ntrain)]
+    )
+    proj_errors = norms ** 2 - proj_norms ** 2
+    return proj_errors
+
+
+def _prune(greedy_errors, proj_matrix, num):  # pragma: no cover
+    """Prune arrays to have size num."""
+    return greedy_errors[:num], proj_matrix[:num]
+
+
+def reduce_basis(
+    training_space,
+    physical_interval,
+    parameter_interval,
+    integration_rule="riemann",
+    greedy_tol=1e-12,
+) -> tuple:  # pragma: no cover
+    """Reduced Basis greedy algorithm implementation.
+
+    Algorithm  to build an orthonormal basis from training data. This
+    basis reproduces the training functions by means of projection within a
+    tolerance specified by the user [field2014fast]_.
+
+    Returns
+    -------
+    basis : arby.Basis
+        The reduced basis of the Reduced Order Model.
+    greedy_error: np.ndarray.
+        Error of the greedy algorithm.
+
+    Raises
+    ------
+    ValueError
+        If ``training_space.shape[1]`` doesn't coincide with weights of the
+        quadrature rule.
+
+    """
+    integration = Integration(physical_interval, rule=integration_rule)
+
+    # useful information
+    Ntrain = training_space.shape[0]
+    Nsamples = training_space.shape[1]
+
+    # Validate inputs
+    if Nsamples != np.size(integration.weights_):
+        raise ValueError(
+            "Number of samples is inconsistent with quadrature rule."
+        )
+
+    # If seed gives a null function, choose a random seed
+    index_seed = 0
+    seed_function = training_space[index_seed]
+    zero_function = np.zeros_like(seed_function)
+    while np.allclose(seed_function, zero_function):
+        index_seed = np.random.randint(1, Ntrain)
+        seed_function = training_space[index_seed]
+
+    # ====== Seed the greedy algorithm and allocate memory ======
+
+    # Allocate memory for greedy algorithm arrays
+    greedy_errors = np.empty(Ntrain, dtype="double")
+    basisnorms = np.empty(Ntrain, dtype="double")
+    proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_space.dtype)
+
+    norms = integration.norm(training_space)
+
+    # Seed
+    greedy_indices = [index_seed]
+    basis_data = np.empty_like(training_space)
+    basis_data[0] = training_space[index_seed] / norms[index_seed]
+
+    basisnorms[0] = norms[index_seed]
+    proj_matrix[0] = integration.dot(basis_data[0], training_space)
+
+    errs = _sq_prog_errors(proj_matrix[:1], norms=norms, Ntrain=Ntrain)
+    next_index = np.argmax(errs)
+    greedy_errors[0] = errs[next_index]
+    sigma = greedy_errors[0]
+
+    # ====== Start greedy loop ======
+    logger.debug("\n Step", "\t", "Error")
+    nn = 0
+    while sigma > greedy_tol:
+        nn += 1
+
+        if next_index in greedy_indices:
+
+            # Prune excess allocated entries
+            greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
+            return (
+                Basis(data=basis_data[:nn], integration=integration),
+                greedy_errors,
+            )
+
+        greedy_indices.append(next_index)
+        basis_data[nn], basisnorms[nn] = _gs_one_element(
+            training_space[greedy_indices[nn]],
+            basis_data[:nn],
+            integration,
+        )
+        proj_matrix[nn] = integration.dot(basis_data[nn], training_space)
+        errs = _sq_prog_errors(
+            proj_matrix[: nn + 1], norms=norms, Ntrain=Ntrain
+        )
+        next_index = np.argmax(errs)
+        greedy_errors[nn] = errs[next_index]
+
+        sigma = errs[next_index]
+
+        logger.debug(nn, "\t", sigma)
+
+    # Prune excess allocated entries
+    greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn + 1)
+
+    return (
+        Basis(data=basis_data[: nn + 1], integration=integration),
+        greedy_errors,
+    )
