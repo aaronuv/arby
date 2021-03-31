@@ -66,10 +66,10 @@ def test_interpolate(basis_data, physical_interval):
     )
 
 
-def test_reduce_basis(training):
+def test_reduce_basis(training_space):
     physical_interval = np.linspace(0, 1, 101)
 
-    basis, error = arby.reduce_basis(training, physical_interval)
+    basis, error = arby.reduce_basis(training_space, physical_interval)
 
     assert len(basis.data) == 9
     np.testing.assert_allclose(basis.data.mean(), 0.136109, atol=1e-6)
@@ -148,3 +148,22 @@ def test_projection_error_consistency():
     np.testing.assert_allclose(
         computed_errors, expected_errors, rtol=1e-5, atol=1e-8
     )
+
+import pytest
+@pytest.mark.xfail
+def test_greedy_already_selected():
+    """Test greedy stopping condition."""
+    npoints = 101
+
+    # Sample parameter nu and physical variable x
+    nu = np.linspace(0, 10, num=npoints)
+    x = np.linspace(0, 1, 101)
+
+    # build traning space
+    training = np.array([BesselJ(nn, x) for nn in nu])
+
+    # build reduced basis with exagerated greedy_tol
+    bessel = arby.ReducedOrderModel(training, x, greedy_tol=1e-20)
+
+    np.testing.assert_allclose(bessel.basis.mean(), 0.10040373410299859)
+    np.testing.assert_allclose(bessel.basis.std(), 1.017765970259045)

@@ -192,31 +192,38 @@ class ReducedOrderModel:
         if self.Ntrain_ > self.Nsamples_:
             raise ValueError(
                 "Number of samples must be greater than "
-                "number of training functions."
+                "number of training functions. "
+                f"{self.Nsamples_} <= {self.Ntrain_}"
             )
         if self.Nsamples_ != self.physical_interval.size:
             raise ValueError(
                 "Number of samples for each training function must be "
-                "equal to number of physical points."
+                "equal to number of physical points. "
+                f"{self.Nsamples_} != {self.physical_interval.size}"
             )
         if self.parameter_interval is not None:
             if self.Ntrain_ != self.parameter_interval.size:
                 raise ValueError(
                     "Number of training functions must be "
-                    "equal to number of parameter points."
+                    "equal to number of parameter points. "
+                    f"{self.Ntrain_} != {self.parameter_interval.size}"
                 )
 
     # ==== Reduced Basis  ===============================================
 
-    @functools.lru_cache(maxsize=None)
     def _basis_and_error(self):
-        reduced_basis, greedy_error = basis.reduce_basis(
-            self.training_space,
-            self.physical_interval,
-            self.integration_rule,
-            self.greedy_tol,
-        )
-        return reduced_basis, greedy_error
+        if not hasattr(self, "_cached_basis_and_error"):
+            reduced_basis, greedy_error = basis.reduce_basis(
+                self.training_space,
+                self.physical_interval,
+                self.integration_rule,
+                self.greedy_tol,
+            )
+            super().__setattr__(
+                "_cached_basis_and_error", (reduced_basis, greedy_error)
+            )
+
+        return self._cached_basis_and_error
 
     @property
     def basis_(self):
@@ -230,31 +237,33 @@ class ReducedOrderModel:
 
     # ==== Surrogate Method =============================================
 
-    @functools.lru_cache(maxsize=None)
     def _spline_model(self):
+        if not hasattr(self, "_cached_spline_model"):
+            basis = self.basis_
 
-        training_compressed = np.empty(
-            (self.Ntrain_, self.basis.size_),
-            dtype=self.training_space.dtype,
-        )
-
-        basis = self.basis_
-
-        for i in range(self.Ntrain_):
-            for j, node in enumerate(basis.eim_.nodes):
-                training_compressed[i, j] = self.training_space[i, node]
-
-        h_in_nodes_splined = []
-        for i in range(self.basis.Nbasis_):
-            h_in_nodes_splined.append(
-                splrep(
-                    self.parameter_interval,
-                    training_compressed[:, i],
-                    k=self.poly_deg,
-                )
+            training_compressed = np.empty(
+                (self.Ntrain_, basis.size_),
+                dtype=self.training_space.dtype,
             )
 
-        return h_in_nodes_splined
+
+
+            for i in range(self.Ntrain_):
+                for j, node in enumerate(basis.eim_.nodes):
+                    training_compressed[i, j] = self.training_space[i, node]
+
+            h_in_nodes_splined = []
+            for i in range(basis.Nbasis_):
+                h_in_nodes_splined.append(
+                    splrep(
+                        self.parameter_interval,
+                        training_compressed[:, i],
+                        k=self.poly_deg,
+                    )
+                )
+            super().__setattr__("_cached_spline_model", h_in_nodes_splined)
+
+        return self._cached_spline_model
 
     def surrogate(self, param):
         """Evaluate the surrogate model at a given parameter.
