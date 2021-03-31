@@ -206,7 +206,7 @@ class Basis:
 # =============================================================================
 
 
-def _gs_one_element(h, basis, integration, max_iter=3):  # pragma: no cover
+def _gs_one_element(h, basis, integration, max_iter=3):
     """Orthonormalize a function against an orthonormal basis."""
     norm = integration.norm(h)
     e = h / norm
@@ -233,7 +233,7 @@ def _gs_one_element(h, basis, integration, max_iter=3):  # pragma: no cover
     return e / new_norm, new_norm
 
 
-def _sq_prog_errors(proj_matrix, norms, Ntrain):  # pragma: no cover
+def _sq_prog_errors(proj_matrix, norms, Ntrain):
     """Square of projection errors.
 
     Parameters
@@ -256,7 +256,7 @@ def _sq_prog_errors(proj_matrix, norms, Ntrain):  # pragma: no cover
     return proj_errors
 
 
-def _prune(greedy_errors, proj_matrix, num):  # pragma: no cover
+def _prune(greedy_errors, proj_matrix, num):
     """Prune arrays to have size num."""
     return greedy_errors[:num], proj_matrix[:num]
 
@@ -266,7 +266,7 @@ def reduce_basis(
     physical_interval,
     integration_rule="riemann",
     greedy_tol=1e-12,
-) -> tuple:  # pragma: no cover
+) -> tuple:
     """Reduced Basis greedy algorithm implementation.
 
     Algorithm  to build an orthonormal basis from training data. This

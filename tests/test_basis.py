@@ -12,8 +12,6 @@ import arby
 
 import numpy as np
 
-import pytest
-
 from scipy.special import jv as BesselJ
 
 
@@ -95,13 +93,11 @@ def test_projectors():
     """Test that projectors works as true projectors."""
     random = np.random.default_rng(seed=42)
 
-    npoints = 101
-    nu_train = np.linspace(1, 10, num=npoints)
-    x = np.linspace(0, 1, 1001)
+    nu_train = np.linspace(1, 10, num=101)
+    physical_interval = np.linspace(0, 1, 1001)
 
-    training = np.array([BesselJ(nn, x) for nn in nu_train])
+    training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
 
-    physical_interval = x
     basis, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
 
     # compute a random index to test Proj_operator^2 = Proj_operator
@@ -116,13 +112,11 @@ def test_interpolators():
     """Test that projectors works as true projectors."""
     random = np.random.default_rng(seed=42)
 
-    npoints = 101
-    nu_train = np.linspace(1, 10, num=npoints)
-    x = np.linspace(0, 1, 1001)
+    nu_train = np.linspace(1, 10, num=101)
+    physical_interval = np.linspace(0, 1, 1001)
 
-    training = np.array([BesselJ(nn, x) for nn in nu_train])
+    training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
 
-    physical_interval = x
     basis, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
 
     # compute a random index to test Proj_operator^2 = Proj_operator
@@ -133,31 +127,24 @@ def test_interpolators():
     np.testing.assert_allclose(interp_fun, re_interp_fun, rtol=1e-5, atol=1e-8)
 
 
-@pytest.mark.xfail
 def test_projection_error_consistency():
     """Test auto-consistency for projection error function."""
-    npoints = 101
-    nu_train = np.linspace(1, 10, num=npoints)
-    x = np.linspace(0, 1, 1001)
+
+    nu_train = np.linspace(1, 10, num=101)
+    physical_interval = np.linspace(0, 1, 1001)
 
     # build traning space
-    training = np.array([BesselJ(nn, x) for nn in nu_train])
+    training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
 
     # build reduced basis
-    bessel = arby.ReducedOrderModel(
-        training_space=training,
-        physical_interval=x,
-        parameter_interval=nu_train,
-        greedy_tol=1e-12,
-    )
+    basis, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
 
     # Check that projection errors of basis elements onto the basis is
     # zero
     computed_errors = [
-        bessel.projection_error(basis_element, bessel.basis)
-        for _, basis_element in enumerate(bessel.basis)
+        basis.projection_error(basis_element) for basis_element in basis.data
     ]
-    expected_errors = [0.0] * bessel.Nbasis_
+    expected_errors = [0.0] * basis.Nbasis_
     np.testing.assert_allclose(
         computed_errors, expected_errors, rtol=1e-5, atol=1e-8
     )
