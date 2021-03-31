@@ -139,7 +139,7 @@ class Basis:
         invV_matrix = np.linalg.inv(v_matrix.transpose())
         interpolant = self.data.transpose() @ invV_matrix
 
-        return EIM(interpolant=interpolant, nodes=nodes)
+        return EIM(interpolant=interpolant, nodes=tuple(nodes))
 
     def projection_error(self, h):
         """Square of the projection error of a function onto a basis.

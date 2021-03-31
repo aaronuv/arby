@@ -68,23 +68,27 @@ def test_interpolate(basis_data, physical_interval):
     )
 
 
-def test_port(training):
-    x = np.linspace(0, 1, 101)
-    bessel = arby.ReducedOrderModel(training, x)
-    bessel.build_eim()
+def test_reduce_basis(training):
+    physical_interval = np.linspace(0, 1, 101)
 
-    original_basis = bessel.basis
-    original_error = bessel.greedy_errors_
-    original_eim_nodes = bessel.eim_nodes_
-    original_interpolant = bessel.interpolant_
+    basis, error = arby.reduce_basis(training, physical_interval)
 
-    basis, error = arby.reduce_basis(
-        bessel.training_space, bessel.physical_interval)
+    assert len(basis.data) == 9
+    np.testing.assert_allclose(basis.data.mean(), 0.136109, atol=1e-6)
+    np.testing.assert_allclose(basis.data.std(), 1.005630, atol=1e-6)
 
-    assert np.all(basis.data == original_basis)
-    assert np.all(error == original_error)
-    assert np.all(basis.eim_.nodes == original_eim_nodes)
-    assert np.all(basis.eim_.interpolant == original_interpolant)
+    assert basis.eim_.nodes == (0, 100, 2, 36, 9, 72, 1, 20, 89)
+
+    assert len(basis.eim_.interpolant) == 101
+    np.testing.assert_allclose(
+        basis.eim_.interpolant.mean(), 0.111111, atol=1e-6
+    )
+    np.testing.assert_allclose(
+        basis.eim_.interpolant.std(), 0.351107, atol=1e-6
+    )
+
+    np.testing.assert_allclose(error.mean(), 0.0047, atol=1e-6)
+    np.testing.assert_allclose(error.std(), 0.011576, atol=1e-6)
 
 
 @pytest.mark.xfail
