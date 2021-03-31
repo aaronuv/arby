@@ -14,24 +14,12 @@ import attr
 
 import numpy as np
 
-from .integrals import Integration
+from . import integrals
 
-# ================
-# Constants
-# ================
 
-if hasattr(functools, "cached_property"):
-
-    cached_property = functools.cached_property
-
-else:
-
-    def cached_property(func):  # pragma: no cover
-        """Workaround for functools.cached_property for Python < 3.8."""
-        cache = functools.lru_cache(maxsize=None)
-        cached_func = cache(func)
-        cached_prop = property(cached_func)
-        return cached_prop
+# =================================
+# CONSTANTS
+# =================================
 
 
 logger = logging.getLogger("arby.basis")
@@ -72,16 +60,18 @@ class Basis:
 
     data: np.ndarray = attr.ib(converter=np.asarray)
     integration: np.ndarray = attr.ib(
-        validator=attr.validators.instance_of(Integration)
+        validator=attr.validators.instance_of(integrals.Integration)
     )
-
-    Nbasis_: int = attr.ib(init=False)
 
     # ==== Attrs orchestration=================================================
 
-    @Nbasis_.default
-    def _Nbasis__default(self):
+    @property
+    def Nbasis_(self):
         return self.data.shape[0]
+
+    @property
+    def size_(self):
+        return self.data.size
 
     # ====== Empirical Interpolation Method ===================================
 
@@ -101,7 +91,8 @@ class Basis:
         vandermonde.append(vertical_vector)
         return vandermonde
 
-    @cached_property
+    @property
+    @functools.lru_cache(maxsize=None)
     def eim_(self) -> EIM:
         """Empirical Interpolantion matrix.
 
@@ -287,7 +278,9 @@ def reduce_basis(
         quadrature rule.
 
     """
-    integration = Integration(physical_interval, rule=integration_rule)
+    integration = integrals.Integration(
+        physical_interval, rule=integration_rule
+    )
 
     # useful information
     Ntrain = training_space.shape[0]

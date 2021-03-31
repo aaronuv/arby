@@ -6,6 +6,7 @@
 
 """ROM class and Gram-schmidt function."""
 
+import functools
 import logging
 
 import attr
@@ -14,7 +15,7 @@ import numpy as np
 
 from scipy.interpolate import splev, splrep
 
-from .integrals import Integration, QUADRATURES
+from . import basis, integrals
 
 
 # ================
@@ -23,7 +24,7 @@ from .integrals import Integration, QUADRATURES
 
 
 # Set debbuging variable. Don't have actual implementation
-logger = logging.getLogger("arby.core")
+logger = logging.getLogger("arby.rom")
 
 
 # ===================================
@@ -81,7 +82,7 @@ def gram_schmidt(functions, integration, max_iter=3):
 
     # For the rest of basis elements add them one by one by extending basis
     for new_basis_elem in functions[1:]:
-        projected_element, _ = _gs_one_element(
+        projected_element, _ = basis._gs_one_element(  # noqa
             new_basis_elem, ortho_basis, integration, max_iter
         )
         ortho_basis.append(projected_element)
@@ -90,39 +91,12 @@ def gram_schmidt(functions, integration, max_iter=3):
     return basis
 
 
-def _gs_one_element(h, basis, integration, max_iter=3):
-    """Orthonormalize a function against an orthonormal basis."""
-    norm = integration.norm(h)
-    e = h / norm
-
-    n_iters = 0
-    continue_loop = True
-    while continue_loop:
-        for b in basis:
-            e -= b * integration.dot(b, e)
-        new_norm = integration.norm(e)
-
-        a = 0.5
-        if new_norm / norm <= a:
-            norm = new_norm
-            n_iters += 1
-            if n_iters > max_iter:
-                raise StopIteration(
-                    "Gram-Schmidt algorithm: max number of "
-                    "iterations reached ({}).".format(max_iter)
-                )
-        else:
-            continue_loop = False
-
-    return e / new_norm, new_norm
-
-
 # =================================
 # Class for Reduced Order Modeling
 # =================================
 
 
-@attr.s()
+@attr.s(frozen=True, hash=True)
 class ReducedOrderModel:
     """Build reduced order models from training data.
 
@@ -192,286 +166,95 @@ class ReducedOrderModel:
     control the precision of the reduced basis or the spline model.
     """
 
-    training_space: np.ndarray = attr.ib(
-        default=None, converter=attr.converters.optional(np.asarray)
-    )
-    physical_interval: np.ndarray = attr.ib(
-        default=None, converter=attr.converters.optional(np.asarray)
-    )
-    parameter_interval: np.ndarray = attr.ib(
-        default=None, converter=attr.converters.optional(np.asarray)
-    )
+    training_space: np.ndarray = attr.ib(converter=np.asarray)
+    physical_interval: np.ndarray = attr.ib(converter=np.asarray)
+    parameter_interval: np.ndarray = attr.ib(converter=np.asarray)
 
     integration_rule: str = attr.ib(
-        default="riemann", validator=attr.validators.in_(QUADRATURES)
+        default="riemann", validator=attr.validators.in_(integrals.QUADRATURES)
     )
     greedy_tol: float = attr.ib(default=1e-12)
     poly_deg: int = attr.ib(default=3)
 
-    _basis: np.ndarray = attr.ib(
-        default=None, converter=attr.converters.optional(np.asarray)
-    )
-
-    _spline_model = attr.ib(default=None, init=False)
-
-    Ntrain_: int = attr.ib(init=False)
-    Nsamples_: int = attr.ib(init=False)
-    Nbasis_: int = attr.ib(init=False)
-    integration_: Integration = attr.ib(init=False)
-
-    # ==== Attrs orchestration=================================================
-
-    @Ntrain_.default
-    def _Ntrain__default(self):
-        if self.training_space is not None:
-            return self.training_space.shape[0]
-
-    @Nsamples_.default
-    def _Nsamples__default(self):
-        if self.training_space is not None:
-            return self.training_space.shape[1]
-
-    @integration_.default
-    def _integration__default(self):
-        if (
-            self.training_space is not None
-            and self.physical_interval is not None  # noqa: W503
-        ):
-            return Integration(
-                interval=self.physical_interval, rule=self.integration_rule
-            )
-
-    @Nbasis_.default
-    def _Nbasis__default(self):
-        if self._basis is not None:
-            return self._basis.shape[0]
-
-    def __attrs_post_init__(self):  # noqa all the complex validators
-        if (
-            self.training_space is not None
-            and self.physical_interval is not None  # noqa: W503
-        ):
-            if self.Ntrain_ > self.Nsamples_:
-                raise ValueError(
-                    "Number of samples must be greater than "
-                    "number of training functions."
-                )
-            if self.Nsamples_ != self.physical_interval.size:
-                raise ValueError(
-                    "Number of samples for each training function must be "
-                    "equal to number of physical points."
-                )
-            if self.parameter_interval is not None:
-                if self.Ntrain_ != self.parameter_interval.size:
-                    raise ValueError(
-                        "Number of training functions must be "
-                        "equal to number of parameter points."
-                    )
-
-    # ==== Private methods ====================================================
-
-    def _loss(self, proj_matrix, norms):
-        """Square of projection errors.
-
-        Parameters
-        ----------
-        proj_matrix : numpy.ndarray, shape=(n,`Ntrain`)
-            Stores the projection coefficients of the training functions. n
-            is the number of basis elements.
-        norms : numpy.ndarray, shape=(`Ntrain`)
-            Stores the norms of the training functions.
-
-        Returns
-        -------
-        proj_errors : numpy.ndarray, shape=(`Ntrain`)
-            Squared projection errors.
-        """
-        proj_norms = np.array(
-            [np.linalg.norm(proj_matrix[:, i]) for i in range(self.Ntrain_)]
-        )
-        proj_errors = norms ** 2 - proj_norms ** 2
-        return proj_errors
-
-    def _next_vandermonde(self, nodes, vandermonde=None):
-        """Build the next Vandermonde matrix from the previous one."""
-        if vandermonde is None:
-            vandermonde = [[self.basis[0, nodes[0]]]]
-            return vandermonde
-
-        n = len(vandermonde)
-        new_node = nodes[-1]
-        for i in range(n):
-            vandermonde[i].append(self.basis[i, new_node])
-
-        vertical_vector = [self.basis[n, nodes[j]] for j in range(n)]
-        vertical_vector.append(self.basis[n, new_node])
-        vandermonde.append(vertical_vector)
-        return vandermonde
-
-    def _prune(self, greedy_errors, proj_matrix, num):
-        """Prune arrays to have size num."""
-        return greedy_errors[:num], proj_matrix[:num]
-
-    # ==== Reduced Basis Method ===============================================
+    # ==== Size properties ==============================================
 
     @property
-    def basis(self):
-        """Array of basis elements.
+    def Ntrain_(self):
+        return self.training_space.shape[0]
 
-        Return a user-specified basis or implement the Reduced Basis greedy
-        algorithm [2]_ to build an orthonormal basis from training data. This
-        basis reproduces the training functions by means of projection within a
-        tolerance specified by the user.
+    @property
+    def Nsamples_(self):
+        return self.training_space.shape[1]
 
-        Returns
-        -------
-        basis : numpy.ndarray
-            The reduced basis of the Reduced Order Model.
+    # ==== Attrs orchestration ===========================================
 
-        Raises
-        ------
-        ValueError
-            If ``Nsamples`` doesn't coincide with weights of the quadrature
-            rule.
-
-        References
-        ----------
-        .. [2] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
-            and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
-            Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
-
-        """
-        if self._basis is not None:
-            return self._basis
-
-        # If seed gives a null function, choose a random seed
-        index_seed = 0
-        seed_function = self.training_space[index_seed]
-        zero_function = np.zeros_like(seed_function)
-        while np.allclose(seed_function, zero_function):
-            index_seed = np.random.randint(1, self.Ntrain_)
-            seed_function = self.training_space[index_seed]
-
-        # ====== Seed the greedy algorithm and allocate memory ======
-
-        # Validate inputs
-        if self.Nsamples_ != np.size(self.integration_.weights_):
+    def __attrs_post_init__(self):  # noqa all the complex validators
+        if self.Ntrain_ > self.Nsamples_:
             raise ValueError(
-                "Number of samples is inconsistent " "with quadrature rule."
+                "Number of samples must be greater than "
+                "number of training functions."
             )
-
-        # Allocate memory for greedy algorithm arrays
-        greedy_errors = np.empty(self.Ntrain_, dtype="double")
-        basisnorms = np.empty(self.Ntrain_, dtype="double")
-        proj_matrix = np.empty(
-            (self.Ntrain_, self.Ntrain_), dtype=self.training_space.dtype
-        )
-
-        norms = self.integration_.norm(self.training_space)
-
-        # Seed
-        greedy_indices = [index_seed]
-        basis = np.empty_like(self.training_space)
-        basis[0] = self.training_space[index_seed] / norms[index_seed]
-
-        basisnorms[0] = norms[index_seed]
-        proj_matrix[0] = self.integration_.dot(basis[0], self.training_space)
-
-        errs = self._loss(proj_matrix[:1], norms=norms)
-        next_index = np.argmax(errs)
-        greedy_errors[0] = errs[next_index]
-        sigma = greedy_errors[0]
-
-        # ====== Start greedy loop ======
-        logger.debug("\n Step", "\t", "Error")
-        nn = 0
-        while sigma > self.greedy_tol:
-            nn += 1
-
-            if next_index in greedy_indices:
-
-                # Prune excess allocated entries
-                greedy_errors, proj_matrix = self._prune(
-                    greedy_errors, proj_matrix, nn
+        if self.Nsamples_ != self.physical_interval.size:
+            raise ValueError(
+                "Number of samples for each training function must be "
+                "equal to number of physical points."
+            )
+        if self.parameter_interval is not None:
+            if self.Ntrain_ != self.parameter_interval.size:
+                raise ValueError(
+                    "Number of training functions must be "
+                    "equal to number of parameter points."
                 )
-                self._basis = basis[:nn]
-                self.Nbasis_ = nn
-                return self._basis
 
-            greedy_indices.append(next_index)
-            basis[nn], basisnorms[nn] = _gs_one_element(
-                self.training_space[greedy_indices[nn]],
-                basis[:nn],
-                self.integration_,
-            )
-            proj_matrix[nn] = self.integration_.dot(
-                basis[nn], self.training_space
-            )
-            errs = self._loss(proj_matrix[: nn + 1], norms=norms)
-            next_index = np.argmax(errs)
-            greedy_errors[nn] = errs[next_index]
+    # ==== Reduced Basis  ===============================================
 
-            sigma = errs[next_index]
+    @functools.lru_cache(maxsize=None)
+    def _basis_and_error(self):
+        reduced_basis, greedy_error = basis.reduce_basis(
+            self.training_space,
+            self.physical_interval,
+            self.integration_rule,
+            self.greedy_tol,
+        )
+        return reduced_basis, greedy_error
 
-            logger.debug(nn, "\t", sigma)
+    @property
+    def basis_(self):
+        reduced_basis, _ = self._basis_and_error()
+        return reduced_basis
 
-        # Prune excess allocated entries
-        greedy_errors, proj_matrix = self._prune(
-            greedy_errors, proj_matrix, nn + 1
+    @property
+    def greedy_error_(self):
+        _, greedy_error = self._basis_and_error()
+        return greedy_error
+
+    # ==== Surrogate Method =============================================
+
+    @functools.lru_cache(maxsize=None)
+    def _spline_model(self):
+
+        training_compressed = np.empty(
+            (self.Ntrain_, self.basis.size_),
+            dtype=self.training_space.dtype,
         )
 
-        self.Nbasis_ = nn + 1
-        self.greedy_errors_ = greedy_errors
-        self._basis = basis[: nn + 1]
+        basis = self.basis_
 
-        return self._basis
+        for i in range(self.Ntrain_):
+            for j, node in enumerate(basis.eim_.nodes):
+                training_compressed[i, j] = self.training_space[i, node]
 
-    # ====== Empirical Interpolation Method ===================================
+        h_in_nodes_splined = []
+        for i in range(self.basis.Nbasis_):
+            h_in_nodes_splined.append(
+                splrep(
+                    self.parameter_interval,
+                    training_compressed[:, i],
+                    k=self.poly_deg,
+                )
+            )
 
-    def build_eim(self):
-        """Find the EIM nodes and build an Empirical Interpolantion matrix.
-
-        Implement the Empirical Interpolation Method [3]_ to select a set of
-        interpolation nodes from the physical interval and build an interpolant
-        matrix.
-
-        Raises
-        ------
-        ValueError
-            If there is no basis for EIM.
-
-        References
-        ----------
-        .. [3] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
-          and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
-          Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
-
-        """
-        nodes = []
-        v_matrix = None
-        first_node = np.argmax(np.abs(self.basis[0]))
-        nodes.append(first_node)
-
-        logger.debug(first_node)
-
-        for i in range(1, self.Nbasis_):
-            v_matrix = self._next_vandermonde(nodes, v_matrix)
-            base_at_nodes = [self.basis[i, t] for t in nodes]
-            invV_matrix = np.linalg.inv(v_matrix)
-            step_basis = self.basis[:i]
-            basis_interpolant = base_at_nodes @ invV_matrix @ step_basis
-            residual = self.basis[i] - basis_interpolant
-            new_node = np.argmax(abs(residual))
-
-            logger.debug(new_node)
-            nodes.append(new_node)
-
-        v_matrix = np.array(self._next_vandermonde(nodes, v_matrix))
-        invV_matrix = np.linalg.inv(v_matrix.transpose())
-        self.interpolant_ = self.basis.transpose() @ invV_matrix
-        self.eim_nodes_ = nodes
-
-    # ==== Surrogate Method ===================================================
+        return h_in_nodes_splined
 
     def surrogate(self, param):
         """Evaluate the surrogate model at a given parameter.
@@ -494,96 +277,13 @@ class ReducedOrderModel:
             The evaluated surrogate function for the given parameters.
 
         """
-        if self._spline_model is None:
-            self.build_eim()
 
-            training_compressed = np.empty(
-                (self.Ntrain_, self.basis.size),
-                dtype=self.training_space.dtype,
-            )
-
-            for i in range(self.Ntrain_):
-                for j, node in enumerate(self.eim_nodes_):
-                    training_compressed[i, j] = self.training_space[i, node]
-
-            h_in_nodes_splined = []
-            for i in range(self.Nbasis_):
-                h_in_nodes_splined.append(
-                    splrep(
-                        self.parameter_interval,
-                        training_compressed[:, i],
-                        k=self.poly_deg,
-                    )
-                )
-
-            self._spline_model = h_in_nodes_splined
+        spline_model = self._spline_model()
+        basis = self.basis_
 
         h_surr_at_nodes = np.array(
-            [splev(param, spline) for spline in self._spline_model]
+            [splev(param, spline) for spline in spline_model]
         )
-        h_surrogate = self.interpolant_ @ h_surr_at_nodes
+        h_surrogate = basis.eim_.interpolant @ h_surr_at_nodes
 
         return h_surrogate
-
-    # ==== Validation methods =================================================
-
-    def projection_error(self, h, basis):
-        """Square of the projection error of a function onto a basis.
-
-        The error is computed in the L2 norm.
-
-        Parameters
-        ----------
-        h: numpy.array
-            Function or set of functions to be projected.
-        basis: numpy.array
-            Orthonormal basis.
-
-        Returns
-        -------
-        l2_error: float or numpy.array
-            Square of the projection error.
-        """
-        h_norm = self.integration_.norm(h).real
-        inner_prod = np.array(
-            [self.integration_.dot(basis_elem, h) for basis_elem in basis]
-        )
-        l2_error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
-        return l2_error
-
-    def project(self, h, basis):
-        """Project a function h on a basis.
-
-        Parameters
-        ----------
-        h: numpy.array
-            Function or set of functions to be projected.
-        basis: numpy.array
-            Orthonormal basis.
-
-        Returns
-        -------
-        projected_function: numpy.array
-            Projection of h on the given basis.
-        """
-        projected_function = 0.0
-        for e in basis:
-            projected_function += e * self.integration_.dot(e, h)
-        return projected_function
-
-    def interpolate(self, h):
-        """Interpolate a function h at EIM nodes.
-
-        Parameters
-        ----------
-        h: numpy.array
-            Function or set of functions to be interpolated.
-
-        Returns
-        -------
-        h_interpolated: numpy.array
-            Function h interpolated at EIM nodes.
-        """
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_nodes_])
-        h_interpolated = self.interpolant_ @ h_at_nodes
-        return h_interpolated
