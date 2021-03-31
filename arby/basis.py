@@ -44,11 +44,6 @@ class Basis:
     integration: arby.integrals.Integration
         Instance of the `Integration` class.
 
-    Attributes
-    ----------
-    Nbasis_: int
-        Number of basis elements.
-
 
     References
     ----------
@@ -66,11 +61,13 @@ class Basis:
     # ==== Attrs orchestration=================================================
 
     @property
-    def Nbasis_(self):
+    def Nbasis_(self) -> int:
+        """Return the number of basis elements."""
         return self.data.shape[0]
 
     @property
-    def size_(self):
+    def size_(self) -> int:
+        """Return the total number of elements in the basis."""
         return self.data.size
 
     # ====== Empirical Interpolation Method ===================================
@@ -193,7 +190,7 @@ class Basis:
 
 
 # =============================================================================
-# FUNCTIONS
+# INTERNAL FUNCTIONS
 # =============================================================================
 
 
@@ -252,13 +249,81 @@ def _prune(greedy_errors, proj_matrix, num):
     return greedy_errors[:num], proj_matrix[:num]
 
 
+# =============================================================================
+# PUBLIC FUNCTIONS
+# =============================================================================
+
+# ===================================
+#    Iterated-Modified Gram-Schmidt
+#      Orthonormalization Function
+# ===================================
+
+
+def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
+    """Orthonormalize a set of functions.
+
+    This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
+    algorithm to build an orthonormal basis from a set of functions
+    described in [hoffmann1989iterative]_.
+
+    Parameters
+    ----------
+    functions : array_like, shape=(m, L)
+        Functions to be orthonormalized, where m is the number of functions
+        and L is the sample length.
+    integration : arby.integrals.Integration
+        Instance of the `Integration` class.
+    max_iter : int, optional
+        Maximum number of interations. Default = 3.
+
+    Returns
+    -------
+    basis : numpy.ndarray
+        Orthonormalized array.
+
+    Raises
+    ------
+    ValueError
+        If functions are not linearly independent.
+
+    References
+    ----------
+    .. [hoffmann1989iterative] Hoffmann, W. Iterative algorithms for
+      Gram-Schmidt orthogonalization. Computing 41, 335-348 (1989).
+      https://doi.org/10.1007/BF02241222
+
+    """
+    functions = np.asarray(functions)
+
+    _, svds, _ = np.linalg.svd(functions)
+
+    linear_indep_tol = 5e-15
+    if np.min(svds) < linear_indep_tol:
+        raise ValueError("Functions are not linearly independent.")
+
+    ortho_basis = []
+
+    # First element of the basis is special, it's just normalized
+    ortho_basis.append(integration.normalize(functions[0]))
+
+    # For the rest of basis elements add them one by one by extending basis
+    for new_basis_elem in functions[1:]:
+        projected_element, _ = _gs_one_element(
+            new_basis_elem, ortho_basis, integration, max_iter
+        )
+        ortho_basis.append(projected_element)
+    basis_data = np.array(ortho_basis)
+
+    return basis_data
+
+
 def reduce_basis(
     training_space,
     physical_interval,
     integration_rule="riemann",
     greedy_tol=1e-12,
 ) -> tuple:
-    """Reduced Basis greedy algorithm implementation.
+    """Reduce Basis greedy algorithm implementation.
 
     Algorithm  to build an orthonormal basis from training data. This
     basis reproduces the training functions by means of projection within a

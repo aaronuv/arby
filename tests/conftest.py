@@ -37,11 +37,6 @@ def basis_data():
 
 
 @pytest.fixture
-def basis(basis_data):
-    return basis_data
-
-
-@pytest.fixture
 def training_space():
     path = BESSEL_PATH / "bessel_training.txt"
     return np.loadtxt(path)

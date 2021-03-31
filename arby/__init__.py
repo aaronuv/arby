@@ -17,6 +17,6 @@ __all__ = [
     "reduce_basis",
 ]
 
-from .basis import Basis, reduce_basis
+from .basis import Basis, gram_schmidt, reduce_basis
 from .integrals import Integration
-from .rom import ReducedOrderModel, gram_schmidt
+from .rom import ReducedOrderModel

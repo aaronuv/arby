@@ -149,21 +149,23 @@ def test_projection_error_consistency():
         computed_errors, expected_errors, rtol=1e-5, atol=1e-8
     )
 
-import pytest
-@pytest.mark.xfail
+
 def test_greedy_already_selected():
     """Test greedy stopping condition."""
-    npoints = 101
 
     # Sample parameter nu and physical variable x
-    nu = np.linspace(0, 10, num=npoints)
-    x = np.linspace(0, 1, 101)
+    parameter_interval = np.linspace(0, 10, num=101)
+    physical_interval = np.linspace(0, 1, 101)
 
     # build traning space
-    training = np.array([BesselJ(nn, x) for nn in nu])
+    training_space = np.array(
+        [BesselJ(nn, physical_interval) for nn in parameter_interval]
+    )
 
     # build reduced basis with exagerated greedy_tol
-    bessel = arby.ReducedOrderModel(training, x, greedy_tol=1e-20)
+    basis, _ = arby.reduce_basis(
+        training_space, physical_interval, greedy_tol=1e-20
+    )
 
-    np.testing.assert_allclose(bessel.basis.mean(), 0.10040373410299859)
-    np.testing.assert_allclose(bessel.basis.std(), 1.017765970259045)
+    np.testing.assert_allclose(basis.data.mean(), 0.10040373410299859)
+    np.testing.assert_allclose(basis.data.std(), 1.017765970259045)

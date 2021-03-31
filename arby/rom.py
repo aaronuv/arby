@@ -6,7 +6,6 @@
 
 """ROM class and Gram-schmidt function."""
 
-import functools
 import logging
 
 import attr
@@ -25,70 +24,6 @@ from . import basis, integrals
 
 # Set debbuging variable. Don't have actual implementation
 logger = logging.getLogger("arby.rom")
-
-
-# ===================================
-#    Iterated-Modified Gram-Schmidt
-#      Orthonormalization Function
-# ===================================
-
-
-def gram_schmidt(functions, integration, max_iter=3):
-    """Orthonormalize a set of functions.
-
-    This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
-    algorithm to build an orthonormal basis from a set of functions
-    described in [1]_.
-
-    Parameters
-    ----------
-    functions : array_like, shape=(m, L)
-        Functions to be orthonormalized, where m is the number of functions
-        and L is the sample length.
-    integration : arby.integrals.Integration
-        Instance of the `Integration` class.
-    max_iter : int, optional
-        Maximum number of interations. Default = 3.
-
-    Returns
-    -------
-    basis : numpy.ndarray
-        Orthonormalized array.
-
-    Raises
-    ------
-    ValueError
-        If functions are not linearly independent.
-
-    References
-    ----------
-    .. [1] Hoffmann, W. Iterative algorithms for Gram-Schmidt
-      orthogonalization. Computing 41, 335–348 (1989).
-      https://doi.org/10.1007/BF02241222
-
-    """
-    functions = np.asarray(functions)
-
-    _, svds, _ = np.linalg.svd(functions)
-
-    linear_indep_tol = 5e-15
-    if np.min(svds) < linear_indep_tol:
-        raise ValueError("Functions are not linearly independent.")
-
-    ortho_basis = []
-
-    # First element of the basis is special, it's just normalized
-    ortho_basis.append(integration.normalize(functions[0]))
-
-    # For the rest of basis elements add them one by one by extending basis
-    for new_basis_elem in functions[1:]:
-        projected_element, _ = basis._gs_one_element(  # noqa
-            new_basis_elem, ortho_basis, integration, max_iter
-        )
-        ortho_basis.append(projected_element)
-    basis = np.array(ortho_basis)
-
-    return basis
 
 
 # =================================
@@ -127,22 +62,6 @@ class ReducedOrderModel:
     poly_deg: int, optional
         Degree <= 5 of the polynomials used to build splines. Default = 3.
 
-    Attributes
-    ----------
-    Ntrain_: int
-        Number of training functions or parameter points.
-    Nsamples_: int
-        Number of sample or physical points.
-    integration_: arby.integrals.Integration
-        Instance of the `Integration` class.
-    greedy_indices_: list(int)
-        Indices selected by the reduced basis greedy algorithm.
-    Nbasis_: int
-        Number of basis elements.
-    eim_nodes_: list(int)
-        Indices selected by the EIM in `build_eim`.
-    interpolant_: numpy.ndarray
-        Empirical Interpolation matrix.
 
     Examples
     --------
@@ -180,10 +99,12 @@ class ReducedOrderModel:
 
     @property
     def Ntrain_(self):
+        """Return the number of training functions or parameter points."""
         return self.training_space.shape[0]
 
     @property
     def Nsamples_(self):
+        """Return the number of sample or physical points."""
         return self.training_space.shape[1]
 
     # ==== Attrs orchestration ===========================================
@@ -227,11 +148,13 @@ class ReducedOrderModel:
 
     @property
     def basis_(self):
+        """Reduced Basis greedy algorithm implementation."""
         reduced_basis, _ = self._basis_and_error()
         return reduced_basis
 
     @property
     def greedy_error_(self):
+        """Error of the reduce basis greedy algorithm."""
         _, greedy_error = self._basis_and_error()
         return greedy_error
 
@@ -245,8 +168,6 @@ class ReducedOrderModel:
                 (self.Ntrain_, basis.size_),
                 dtype=self.training_space.dtype,
             )
-
-
 
             for i in range(self.Ntrain_):
                 for j, node in enumerate(basis.eim_.nodes):
@@ -286,7 +207,6 @@ class ReducedOrderModel:
             The evaluated surrogate function for the given parameters.
 
         """
-
         spline_model = self._spline_model()
         basis = self.basis_
 
