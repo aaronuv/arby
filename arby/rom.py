@@ -4,7 +4,7 @@
 # License: MIT
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
-"""ROM class and Gram-schmidt function."""
+"""ROM class."""
 
 import logging
 
@@ -109,13 +109,13 @@ class ReducedOrderModel:
 
     # ==== Attrs orchestration ===========================================
 
-    def __attrs_post_init__(self):  # noqa all the complex validators
-        if self.Ntrain_ > self.Nsamples_:
-            raise ValueError(
-                "Number of samples must be greater than "
-                "number of training functions. "
-                f"{self.Nsamples_} <= {self.Ntrain_}"
-            )
+#    def __attrs_post_init__(self):  # noqa all the complex validators
+#        if self.Ntrain_ > self.Nsamples_:
+#            raise ValueError(
+#                "Number of samples must be greater than "
+#                "number of training functions. "
+#                f"{self.Nsamples_} <= {self.Ntrain_}"
+#            )
         if self.Nsamples_ != self.physical_interval.size:
             raise ValueError(
                 "Number of samples for each training function must be "
@@ -130,33 +130,41 @@ class ReducedOrderModel:
                     f"{self.Ntrain_} != {self.parameter_interval.size}"
                 )
 
-    # ==== Reduced Basis  ===============================================
+    # ==== Reduced Basis ================================================
 
-    def _basis_and_error(self):
-        if not hasattr(self, "_cached_basis_and_error"):
-            reduced_basis, greedy_error = basis.reduce_basis(
+    def _rbalg_outputs(self):
+        if not hasattr(self, "_cached_rbalg_outputs"):
+            reduced_basis, greedy_errors, proj_matrix = basis.reduce_basis(
                 self.training_space,
                 self.physical_interval,
                 self.integration_rule,
                 self.greedy_tol,
             )
             super().__setattr__(
-                "_cached_basis_and_error", (reduced_basis, greedy_error)
+                "_cached_rbalg_outputs", (reduced_basis,
+                                            greedy_errors,
+                                            proj_matrix)
             )
 
-        return self._cached_basis_and_error
+        return self._cached_rbalg_outputs
 
     @property
     def basis_(self):
         """Reduced Basis greedy algorithm implementation."""
-        reduced_basis, _ = self._basis_and_error()
+        reduced_basis, _, _ = self._rbalg_outputs()
         return reduced_basis
 
     @property
-    def greedy_error_(self):
+    def greedy_errors_(self):
         """Error of the reduce basis greedy algorithm."""
-        _, greedy_error = self._basis_and_error()
-        return greedy_error
+        _, greedy_errors, _ = self._rbalg_outputs()
+        return greedy_errors
+
+    @property
+    def projection_matrix_(self):
+        """Projection coefficients computed in the greedy algorithm."""
+        _, _, proj_matrix = self._rbalg_outputs()
+        return proj_matrix
 
     # ==== Surrogate Method =============================================
 

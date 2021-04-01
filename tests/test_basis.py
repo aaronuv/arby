@@ -69,7 +69,7 @@ def test_interpolate(basis_data, physical_interval):
 def test_reduce_basis(training_space):
     physical_interval = np.linspace(0, 1, 101)
 
-    basis, error = arby.reduce_basis(training_space, physical_interval)
+    basis, error, _ = arby.reduce_basis(training_space, physical_interval)
 
     assert len(basis.data) == 9
     np.testing.assert_allclose(basis.data.mean(), 0.136109, atol=1e-6)
@@ -98,7 +98,7 @@ def test_projectors():
 
     training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
 
-    basis, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
+    basis, _, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
 
     # compute a random index to test Proj_operator^2 = Proj_operator
     sample = random.choice(training)
@@ -117,7 +117,7 @@ def test_interpolators():
 
     training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
 
-    basis, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
+    basis, _, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
 
     # compute a random index to test Proj_operator^2 = Proj_operator
     sample = random.choice(training)
@@ -137,7 +137,7 @@ def test_projection_error_consistency():
     training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
 
     # build reduced basis
-    basis, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
+    basis, _, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
 
     # Check that projection errors of basis elements onto the basis is
     # zero
@@ -163,7 +163,7 @@ def test_greedy_already_selected():
     )
 
     # build reduced basis with exagerated greedy_tol
-    basis, _ = arby.reduce_basis(
+    basis, _, _ = arby.reduce_basis(
         training_space, physical_interval, greedy_tol=1e-20
     )
 

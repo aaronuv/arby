@@ -221,7 +221,7 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     return e / new_norm, new_norm
 
 
-def _sq_prog_errors(proj_matrix, norms, Ntrain):
+def _sq_proj_errors(proj_matrix, norms, Ntrain):
     """Square of projection errors.
 
     Parameters
@@ -331,10 +331,12 @@ def reduce_basis(
 
     Returns
     -------
-    basis : arby.Basis
+    basis_ : arby.Basis
         The reduced basis of the Reduced Order Model.
-    greedy_error: np.ndarray.
+    greedy_errors_: np.ndarray.
         Error of the greedy algorithm.
+    projection_matrix_: np.ndarray.
+        Projection coefficients from the greedy algorithm.
 
     Raises
     ------
@@ -382,7 +384,7 @@ def reduce_basis(
     basisnorms[0] = norms[index_seed]
     proj_matrix[0] = integration.dot(basis_data[0], training_space)
 
-    errs = _sq_prog_errors(proj_matrix[:1], norms=norms, Ntrain=Ntrain)
+    errs = _sq_proj_errors(proj_matrix[:1], norms=norms, Ntrain=Ntrain)
     next_index = np.argmax(errs)
     greedy_errors[0] = errs[next_index]
     sigma = greedy_errors[0]
@@ -400,6 +402,7 @@ def reduce_basis(
             return (
                 Basis(data=basis_data[:nn], integration=integration),
                 greedy_errors,
+                proj_matrix,
             )
 
         greedy_indices.append(next_index)
@@ -409,7 +412,7 @@ def reduce_basis(
             integration,
         )
         proj_matrix[nn] = integration.dot(basis_data[nn], training_space)
-        errs = _sq_prog_errors(
+        errs = _sq_proj_errors(
             proj_matrix[: nn + 1], norms=norms, Ntrain=Ntrain
         )
         next_index = np.argmax(errs)
@@ -425,4 +428,5 @@ def reduce_basis(
     return (
         Basis(data=basis_data[: nn + 1], integration=integration),
         greedy_errors,
+        proj_matrix,
     )
