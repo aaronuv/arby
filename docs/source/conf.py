@@ -44,7 +44,7 @@ extensions = [
     "nbsphinx",
     "sphinx.ext.mathjax",
     "sphinx_copybutton"
-    ]
+]
 
 highlight_language = 'none'
 

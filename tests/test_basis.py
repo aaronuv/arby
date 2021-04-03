@@ -20,85 +20,102 @@ from scipy.special import jv as BesselJ
 # =============================================================================
 
 
-def test_basis_shape(basis_data, physical_interval):
-    integration = arby.Integration(physical_interval)
+def test_basis_identity(training_set, physical_points, basis_data):
+    """Test that computed basis matches stored basis for Bessel data."""
+    basis, _, _ = arby.reduced_basis(
+        training_set, physical_points, greedy_tol=1e-14
+    )
+    assert len(basis.data) == 10
+    np.testing.assert_allclose(basis.data.mean(), 0.126264, atol=1e-6)
+    np.testing.assert_allclose(basis.data.std(), 1.012042, atol=1e-6)
+    np.testing.assert_allclose(basis.data, basis_data, atol=1e-12)
+
+
+def test_basis_shape(basis_data, physical_points):
+    """Test that bases shapes are equal for Bessel data."""
+    integration = arby.Integration(physical_points)
     basis = arby.Basis(basis_data, integration)
 
     assert basis.Nbasis_ == len(basis_data)
 
 
-def test_eim(basis_data, physical_interval):
-    integration = arby.Integration(physical_interval)
+def test_eim(basis_data, physical_points):
+    """Test that computed EIM data matches stored EIM for Bessel data."""
+    integration = arby.Integration(physical_points)
     basis = arby.Basis(basis_data, integration)
 
-    np.testing.assert_allclose(basis.eim_.interpolant.mean(), 0.1)
-    np.testing.assert_allclose(basis.eim_.interpolant.std(), 0.345161095)
+    np.testing.assert_allclose(basis.eim.interpolant.mean(), 0.1)
+    np.testing.assert_allclose(basis.eim.interpolant.std(), 0.345161095)
     np.testing.assert_array_equal(
-        basis.eim_.nodes, [0, 100, 2, 36, 9, 72, 1, 20, 89, 4]
+        basis.eim.nodes, [0, 100, 2, 36, 9, 72, 1, 20, 89, 4]
     )
 
 
-def test_projection_error(basis_data, physical_interval):
-    integration = arby.Integration(physical_interval)
+def test_projection_error(basis_data, physical_points):
+    """Test projection_error for dummy points."""
+    integration = arby.Integration(physical_points)
     basis = arby.Basis(basis_data, integration)
 
-    perror = basis.projection_error(physical_interval)
+    perror = basis.projection_error(physical_points)
     np.testing.assert_almost_equal(perror, 0, decimal=10)
 
 
-def test_project(basis_data, physical_interval):
-    integration = arby.Integration(physical_interval)
+def test_project(basis_data, physical_points):
+    """Test project method for dummy points."""
+    integration = arby.Integration(physical_points)
     basis = arby.Basis(basis_data, integration)
 
-    project = basis.project(physical_interval)
-    np.testing.assert_allclose(
-        project, physical_interval, rtol=1e-4, atol=1e-8
-    )
+    project = basis.project(physical_points)
+    np.testing.assert_allclose(project, physical_points, rtol=1e-4, atol=1e-8)
 
 
-def test_interpolate(basis_data, physical_interval):
-    integration = arby.Integration(physical_interval)
+def test_interpolate(basis_data, physical_points):
+    """Test interpolate method for dummy points."""
+    integration = arby.Integration(physical_points)
     basis = arby.Basis(basis_data, integration)
 
-    interpolation = basis.interpolate(physical_interval)
+    interpolation = basis.interpolate(physical_points)
     np.testing.assert_allclose(
-        interpolation, physical_interval, rtol=1e-4, atol=1e-8
+        interpolation, physical_points, rtol=1e-4, atol=1e-8
     )
 
 
-def test_reduce_basis(training_space):
-    physical_interval = np.linspace(0, 1, 101)
+def test_reduce_basis(training_set):
+    physical_points = np.linspace(0, 1, 101)
 
-    basis, error, _ = arby.reduce_basis(training_space, physical_interval)
-
-    assert len(basis.data) == 9
-    np.testing.assert_allclose(basis.data.mean(), 0.136109, atol=1e-6)
-    np.testing.assert_allclose(basis.data.std(), 1.005630, atol=1e-6)
-
-    assert basis.eim_.nodes == (0, 100, 2, 36, 9, 72, 1, 20, 89)
-
-    assert len(basis.eim_.interpolant) == 101
-    np.testing.assert_allclose(
-        basis.eim_.interpolant.mean(), 0.111111, atol=1e-6
-    )
-    np.testing.assert_allclose(
-        basis.eim_.interpolant.std(), 0.351107, atol=1e-6
+    basis, errors, projection_matrix = arby.reduced_basis(
+        training_set, physical_points, greedy_tol=1e-14
     )
 
-    np.testing.assert_allclose(error.mean(), 0.0047, atol=1e-6)
-    np.testing.assert_allclose(error.std(), 0.011576, atol=1e-6)
+    np.testing.assert_allclose(projection_matrix.mean(), 0.009515, atol=1e-6)
+    np.testing.assert_allclose(projection_matrix.std(), 0.061853, atol=1e-6)
+
+    assert basis.eim.nodes == (0, 100, 2, 36, 9, 72, 1, 20, 89, 4)
+
+    assert len(basis.eim.interpolant) == 101
+    np.testing.assert_allclose(
+        basis.eim.interpolant.mean(), 0.100000, atol=1e-6
+    )
+    np.testing.assert_allclose(
+        basis.eim.interpolant.std(), 0.345161, atol=1e-6
+    )
+
+    np.testing.assert_allclose(errors.mean(), 0.004230, atol=1e-6)
+    np.testing.assert_allclose(errors.std(), 0.011072, atol=1e-6)
 
 
-def test_projectors():
-    """Test that projectors works as true projectors."""
+def test_projector():
+    """Test that project method works as true projectors."""
     random = np.random.default_rng(seed=42)
 
     nu_train = np.linspace(1, 10, num=101)
-    physical_interval = np.linspace(0, 1, 1001)
+    physical_points = np.linspace(0, 1, 1001)
 
-    training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
+    training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
-    basis, _, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
+    basis, _, _ = arby.reduced_basis(
+        training, physical_points, greedy_tol=1e-12
+    )
 
     # compute a random index to test Proj_operator^2 = Proj_operator
     sample = random.choice(training)
@@ -108,16 +125,18 @@ def test_projectors():
     np.testing.assert_allclose(proj_fun, re_proj_fun, rtol=1e-5, atol=1e-8)
 
 
-def test_interpolators():
-    """Test that projectors works as true projectors."""
+def test_interpolator():
+    """Test that interpolate method works as true projectors."""
     random = np.random.default_rng(seed=42)
 
     nu_train = np.linspace(1, 10, num=101)
-    physical_interval = np.linspace(0, 1, 1001)
+    physical_points = np.linspace(0, 1, 1001)
 
-    training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
+    training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
-    basis, _, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
+    basis, _, _ = arby.reduced_basis(
+        training, physical_points, greedy_tol=1e-12
+    )
 
     # compute a random index to test Proj_operator^2 = Proj_operator
     sample = random.choice(training)
@@ -131,13 +150,15 @@ def test_projection_error_consistency():
     """Test auto-consistency for projection error function."""
 
     nu_train = np.linspace(1, 10, num=101)
-    physical_interval = np.linspace(0, 1, 1001)
+    physical_points = np.linspace(0, 1, 1001)
 
     # build traning space
-    training = np.array([BesselJ(nn, physical_interval) for nn in nu_train])
+    training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
     # build reduced basis
-    basis, _, _ = arby.reduce_basis(training, physical_interval, greedy_tol=1e-12)
+    basis, _, _ = arby.reduced_basis(
+        training, physical_points, greedy_tol=1e-12
+    )
 
     # Check that projection errors of basis elements onto the basis is
     # zero
@@ -154,17 +175,17 @@ def test_greedy_already_selected():
     """Test greedy stopping condition."""
 
     # Sample parameter nu and physical variable x
-    parameter_interval = np.linspace(0, 10, num=101)
-    physical_interval = np.linspace(0, 1, 101)
+    parameter_points = np.linspace(0, 10, num=101)
+    physical_points = np.linspace(0, 1, 101)
 
     # build traning space
-    training_space = np.array(
-        [BesselJ(nn, physical_interval) for nn in parameter_interval]
+    training_set = np.array(
+        [BesselJ(nn, physical_points) for nn in parameter_points]
     )
 
     # build reduced basis with exagerated greedy_tol
-    basis, _, _ = arby.reduce_basis(
-        training_space, physical_interval, greedy_tol=1e-20
+    basis, _, _ = arby.reduced_basis(
+        training_set, physical_points, greedy_tol=1e-20
     )
 
     np.testing.assert_allclose(basis.data.mean(), 0.10040373410299859)

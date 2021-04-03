@@ -90,7 +90,7 @@ class Basis:
 
     @property
     @functools.lru_cache(maxsize=None)
-    def eim_(self) -> EIM:
+    def eim(self) -> EIM:
         """Empirical Interpolantion matrix.
 
         Implement the Empirical Interpolation Method [field2014fast]_ to select
@@ -184,8 +184,8 @@ class Basis:
         h_interpolated: numpy.array
             Function h interpolated at EIM nodes.
         """
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_.nodes])
-        h_interpolated = self.eim_.interpolant @ h_at_nodes
+        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim.nodes])
+        h_interpolated = self.eim.interpolant @ h_at_nodes
         return h_interpolated
 
 
@@ -317,9 +317,9 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     return basis_data
 
 
-def reduce_basis(
-    training_space,
-    physical_interval,
+def reduced_basis(
+    training_set,
+    physical_points,
     integration_rule="riemann",
     greedy_tol=1e-12,
 ) -> tuple:
@@ -341,17 +341,17 @@ def reduce_basis(
     Raises
     ------
     ValueError
-        If ``training_space.shape[1]`` doesn't coincide with weights of the
+        If ``training_set.shape[1]`` doesn't coincide with weights of the
         quadrature rule.
 
     """
     integration = integrals.Integration(
-        physical_interval, rule=integration_rule
+        physical_points, rule=integration_rule
     )
 
     # useful information
-    Ntrain = training_space.shape[0]
-    Nsamples = training_space.shape[1]
+    Ntrain = training_set.shape[0]
+    Nsamples = training_set.shape[1]
 
     # Validate inputs
     if Nsamples != np.size(integration.weights_):
@@ -361,28 +361,28 @@ def reduce_basis(
 
     # If seed gives a null function, choose a random seed
     index_seed = 0
-    seed_function = training_space[index_seed]
+    seed_function = training_set[index_seed]
     zero_function = np.zeros_like(seed_function)
     while np.allclose(seed_function, zero_function):
         index_seed = np.random.randint(1, Ntrain)
-        seed_function = training_space[index_seed]
+        seed_function = training_set[index_seed]
 
     # ====== Seed the greedy algorithm and allocate memory ======
 
     # Allocate memory for greedy algorithm arrays
     greedy_errors = np.empty(Ntrain, dtype="double")
     basisnorms = np.empty(Ntrain, dtype="double")
-    proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_space.dtype)
+    proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_set.dtype)
 
-    norms = integration.norm(training_space)
+    norms = integration.norm(training_set)
 
     # Seed
     greedy_indices = [index_seed]
-    basis_data = np.empty_like(training_space)
-    basis_data[0] = training_space[index_seed] / norms[index_seed]
+    basis_data = np.empty_like(training_set)
+    basis_data[0] = training_set[index_seed] / norms[index_seed]
 
     basisnorms[0] = norms[index_seed]
-    proj_matrix[0] = integration.dot(basis_data[0], training_space)
+    proj_matrix[0] = integration.dot(basis_data[0], training_set)
 
     errs = _sq_proj_errors(proj_matrix[:1], norms=norms, Ntrain=Ntrain)
     next_index = np.argmax(errs)
@@ -407,11 +407,11 @@ def reduce_basis(
 
         greedy_indices.append(next_index)
         basis_data[nn], basisnorms[nn] = _gs_one_element(
-            training_space[greedy_indices[nn]],
+            training_set[greedy_indices[nn]],
             basis_data[:nn],
             integration,
         )
-        proj_matrix[nn] = integration.dot(basis_data[nn], training_space)
+        proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
         errs = _sq_proj_errors(
             proj_matrix[: nn + 1], norms=norms, Ntrain=Ntrain
         )

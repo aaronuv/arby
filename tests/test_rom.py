@@ -1,4 +1,4 @@
-# test_arby.py
+# test_rom.py
 
 # Copyright (c) 2020, Aarón Villanueva
 # License: MIT
@@ -18,74 +18,66 @@ from scipy.special import jv as BesselJ
 # TESTS
 # =============================================================================
 
-
-def test_make_rom(rom_parameters):
-
-    rom = arby.ReducedOrderModel(**rom_parameters)
-
-    assert rom.Ntrain_ == 101
-    assert rom.Nsamples_ == 101
-
-    np.testing.assert_allclose(rom.basis_.data.mean(), 0.136109, rtol=1e-6)
-    np.testing.assert_allclose(rom.basis_.data.std(), 1.00563, rtol=1e-6)
-
-    np.testing.assert_allclose(rom.greedy_errors_.mean(), 0.00469976, rtol=1e-6)
-
-    np.testing.assert_allclose(
-        rom.greedy_errors_.std(), 0.01157560317828102, rtol=1e-6
-    )
-
-    parameter_interval = rom_parameters["parameter_interval"]
-    physical_interval = rom_parameters["physical_interval"]
-
-    to_surrogate = BesselJ(parameter_interval[0], physical_interval)
-    surrogate = rom.surrogate(to_surrogate)
-
-    np.testing.assert_allclose(
-        surrogate.mean(), 2.726606176467909e-09, rtol=1e-6
-    )
-    np.testing.assert_allclose(surrogate.std(), 1.357027e-08, rtol=1e-6)
-
-
-#def test_sliced_training(rom_parameters):
-#    sliced_training = rom_parameters["training_space"][:, :10]
-#    rom_parameters.update(training_space=sliced_training)
+# def test_sliced_training(rom_parameters):
+#    sliced_training = rom_parameters["training_set"][:10,:]
+#    rom_parameters.update(training_set=sliced_training)
 #    with pytest.raises(ValueError):
 #        arby.ReducedOrderModel(**rom_parameters)
 
+def test_wrong_Nsamples(rom_parameters):
+    """Test input consistency."""
+    rom_parameters.update(physical_points=np.linspace(0, 1, 11))
+    with pytest.raises(ValueError):
+        arby.ReducedOrderModel(**rom_parameters)
 
-#def test_wrong_Nsamples(rom_parameters):
-#    rom_parameters.update(physical_interval=np.linspace(0, 1, 11))
-#    with pytest.raises(ValueError):
-#        arby.ReducedOrderModel(**rom_parameters)
+
+def test_wrong_Ntrain(rom_parameters):
+    """Test input consistency."""
+    rom_parameters.update(parameter_points=np.linspace(0, 10, 11))
+    with pytest.raises(ValueError):
+        arby.ReducedOrderModel(**rom_parameters)
 
 
-#def test_wrong_Ntrain(rom_parameters):
-#    rom_parameters.update(parameter_interval=np.linspace(0, 10, 11))
-#    with pytest.raises(ValueError):
-#        arby.ReducedOrderModel(**rom_parameters)
+def test_rom_rb_interface(rom_parameters):
+    """Test API consistency."""
+    training_set = rom_parameters["training_set"]
+    physical_points = rom_parameters["physical_points"]
+    parameter_points = rom_parameters["parameter_points"]
+
+    bessel = arby.ReducedOrderModel(training_set,
+                                    physical_points,
+                                    parameter_points,
+                                    greedy_tol=1e-14
+                                    )
+    basis = bessel.basis_.data
+    errors = bessel.greedy_errors_
+    projection_matrix = bessel.projection_matrix_
+
+    assert len(basis) == 10
+    assert len(errors) == 10
+    assert len(projection_matrix) == 10
 
 
 def test_surrogate_accuracy():
-    """Test surrogate accuracy."""
+    """Test surrogate accuracy for Bessel functions."""
 
-    parameter_inerval = np.linspace(1, 10, num=101)
+    parameter_points = np.linspace(1, 10, num=101)
     nu_validation = np.linspace(1, 10, num=1001)
-    physical_interval = np.linspace(0, 1, 1001)
+    physical_points = np.linspace(0, 1, 1001)
 
     # build traning space
     training = np.array(
-        [BesselJ(nn, physical_interval) for nn in parameter_inerval]
+        [BesselJ(nn, physical_points) for nn in parameter_points]
     )
 
     # build reduced basis
     bessel = arby.ReducedOrderModel(
-        training_space=training,
-        physical_interval=physical_interval,
-        parameter_interval=parameter_inerval,
+        training_set=training,
+        physical_points=physical_points,
+        parameter_points=parameter_points,
         greedy_tol=1e-15,
     )
-    bessel_test = [BesselJ(nn, physical_interval) for nn in nu_validation]
+    bessel_test = [BesselJ(nn, physical_points) for nn in nu_validation]
     bessel_surrogate = [bessel.surrogate(nn) for nn in nu_validation]
 
     np.testing.assert_allclose(
@@ -96,8 +88,8 @@ def test_surrogate_accuracy():
 def test_gram_schmidt(basis_data):
     """Test Gram Schmidt orthonormalization algorithm."""
 
-    physical_interval = np.linspace(0, 1, 101)
-    integration = arby.Integration(interval=physical_interval, rule="riemann")
+    physical_points = np.linspace(0, 1, 101)
+    integration = arby.Integration(interval=physical_points, rule="riemann")
     computed_basis = arby.gram_schmidt(basis_data, integration)
 
     np.testing.assert_allclose(

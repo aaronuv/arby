@@ -37,23 +37,23 @@ def basis_data():
 
 
 @pytest.fixture
-def training_space():
+def training_set():
     path = BESSEL_PATH / "bessel_training.txt"
     return np.loadtxt(path)
 
 
 @pytest.fixture
-def physical_interval():
-    path = BESSEL_PATH / "physical_interval.txt"
+def physical_points():
+    path = BESSEL_PATH / "physical_points.txt"
     return np.loadtxt(path)
 
 
 @pytest.fixture
-def rom_parameters(training_space, physical_interval):
-    parameter_interval = np.linspace(0, 1, len(training_space))
+def rom_parameters(training_set, physical_points):
+    parameter_points = np.linspace(0, 10, len(training_set))
     params = {
-        "training_space": training_space,
-        "physical_interval": physical_interval,
-        "parameter_interval": parameter_interval,
+        "training_set": training_set,
+        "physical_points": physical_points,
+        "parameter_points": parameter_points,
     }
     return params

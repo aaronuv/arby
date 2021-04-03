@@ -14,9 +14,9 @@ __all__ = [
     "Integration",
     "ReducedOrderModel",
     "gram_schmidt",
-    "reduce_basis",
+    "reduced_basis",
 ]
 
-from .basis import Basis, gram_schmidt, reduce_basis
+from .basis import Basis, gram_schmidt, reduced_basis
 from .integrals import Integration
 from .rom import ReducedOrderModel
