@@ -22,13 +22,13 @@ from scipy.special import jv as BesselJ
 
 def test_basis_identity(training_set, physical_points, basis_data):
     """Test that computed basis matches stored basis for Bessel data."""
-    basis, _, _ = arby.reduced_basis(
+    RB = arby.reduced_basis(
         training_set, physical_points, greedy_tol=1e-14
     )
-    assert len(basis.data) == 10
-    np.testing.assert_allclose(basis.data.mean(), 0.126264, atol=1e-6)
-    np.testing.assert_allclose(basis.data.std(), 1.012042, atol=1e-6)
-    np.testing.assert_allclose(basis.data, basis_data, atol=1e-12)
+    assert len(RB.basis.data) == 10
+    np.testing.assert_allclose(RB.basis.data.mean(), 0.126264, atol=1e-6)
+    np.testing.assert_allclose(RB.basis.data.std(), 1.012042, atol=1e-6)
+    np.testing.assert_allclose(RB.basis.data, basis_data, atol=1e-12)
 
 
 def test_basis_shape(basis_data, physical_points):
@@ -83,10 +83,12 @@ def test_interpolate(basis_data, physical_points):
 def test_reduce_basis(training_set):
     physical_points = np.linspace(0, 1, 101)
 
-    basis, errors, projection_matrix = arby.reduced_basis(
+    RB = arby.reduced_basis(
         training_set, physical_points, greedy_tol=1e-14
     )
-
+    basis = RB.basis
+    errors = RB.errors
+    projection_matrix = RB.projection_matrix
     np.testing.assert_allclose(projection_matrix.mean(), 0.009515, atol=1e-6)
     np.testing.assert_allclose(projection_matrix.std(), 0.061853, atol=1e-6)
 
@@ -113,10 +115,10 @@ def test_projector():
 
     training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
-    basis, _, _ = arby.reduced_basis(
+    RB = arby.reduced_basis(
         training, physical_points, greedy_tol=1e-12
     )
-
+    basis = RB.basis
     # compute a random index to test Proj_operator^2 = Proj_operator
     sample = random.choice(training)
     proj_fun = basis.project(sample)
@@ -134,9 +136,10 @@ def test_interpolator():
 
     training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
-    basis, _, _ = arby.reduced_basis(
+    RB = arby.reduced_basis(
         training, physical_points, greedy_tol=1e-12
     )
+    basis = RB.basis
 
     # compute a random index to test Proj_operator^2 = Proj_operator
     sample = random.choice(training)
@@ -156,10 +159,10 @@ def test_projection_error_consistency():
     training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
     # build reduced basis
-    basis, _, _ = arby.reduced_basis(
+    RB = arby.reduced_basis(
         training, physical_points, greedy_tol=1e-12
     )
-
+    basis = RB.basis
     # Check that projection errors of basis elements onto the basis is
     # zero
     computed_errors = [
@@ -184,9 +187,10 @@ def test_greedy_already_selected():
     )
 
     # build reduced basis with exagerated greedy_tol
-    basis, _, _ = arby.reduced_basis(
+    RB = arby.reduced_basis(
         training_set, physical_points, greedy_tol=1e-20
     )
+    basis = RB.basis
 
-    np.testing.assert_allclose(basis.data.mean(), 0.10040373410299859)
-    np.testing.assert_allclose(basis.data.std(), 1.017765970259045)
+    np.testing.assert_allclose(basis.data.mean(), 0.09575698914482117)
+    np.testing.assert_allclose(basis.data.std(), 0.9780270439748885)

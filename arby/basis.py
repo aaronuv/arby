@@ -29,8 +29,12 @@ logger = logging.getLogger("arby.basis")
 # Class for Basis Analysis
 # =================================
 
-#: Simple container of the Empirical Interpolantion Matrix
+# Container for EIM information
 EIM = namedtuple("EIM", ["interpolant", "nodes"])
+
+# Container for RB information
+RB = namedtuple("RB", ["basis", "indices",
+                       "errors", "projection_matrix"])
 
 
 @attr.s(frozen=True, hash=False)
@@ -399,10 +403,12 @@ def reduced_basis(
 
             # Prune excess allocated entries
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
-            return (
-                Basis(data=basis_data[:nn], integration=integration),
-                greedy_errors,
-                proj_matrix,
+            return RB(
+                basis=Basis(data=basis_data[: nn + 1],
+                            integration=integration),
+                indices=greedy_indices,
+                errors=greedy_errors,
+                projection_matrix=proj_matrix
             )
 
         greedy_indices.append(next_index)
@@ -425,8 +431,9 @@ def reduced_basis(
     # Prune excess allocated entries
     greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn + 1)
 
-    return (
-        Basis(data=basis_data[: nn + 1], integration=integration),
-        greedy_errors,
-        proj_matrix,
+    return RB(
+        basis=Basis(data=basis_data[: nn + 1], integration=integration),
+        indices=tuple(greedy_indices),
+        errors=greedy_errors,
+        projection_matrix=proj_matrix
     )

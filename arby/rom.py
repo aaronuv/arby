@@ -132,16 +132,14 @@ class ReducedOrderModel:
 
     def _rbalg_outputs(self):
         if not hasattr(self, "_cached_rbalg_outputs"):
-            reduced_basis, greedy_errors, proj_matrix = basis.reduced_basis(
+            RB_data = basis.reduced_basis(
                 self.training_set,
                 self.physical_points,
                 self.integration_rule,
                 self.greedy_tol,
             )
             super().__setattr__(
-                "_cached_rbalg_outputs", (reduced_basis,
-                                          greedy_errors,
-                                          proj_matrix)
+                "_cached_rbalg_outputs", RB_data
             )
 
         return self._cached_rbalg_outputs
@@ -149,20 +147,22 @@ class ReducedOrderModel:
     @property
     def basis_(self):
         """Reduced Basis greedy algorithm implementation."""
-        reduced_basis, _, _ = self._rbalg_outputs()
-        return reduced_basis
+        return self._rbalg_outputs().basis
+
+    @property
+    def greedy_indices_(self):
+        """Greedy indices."""
+        return self._rbalg_outputs().indices
 
     @property
     def greedy_errors_(self):
         """Greedy algorithm errors."""
-        _, greedy_errors, _ = self._rbalg_outputs()
-        return greedy_errors
+        return self._rbalg_outputs().errors
 
     @property
     def projection_matrix_(self):
         """Projection coefficients from greedy algorithm."""
-        _, _, proj_matrix = self._rbalg_outputs()
-        return proj_matrix
+        return self._rbalg_outputs().projection_matrix
 
     # ==== Surrogate Method =============================================
 

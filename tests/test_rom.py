@@ -52,10 +52,12 @@ def test_rom_rb_interface(rom_parameters):
     basis = bessel.basis_.data
     errors = bessel.greedy_errors_
     projection_matrix = bessel.projection_matrix_
+    greedy_indices = bessel.greedy_indices_
 
     assert len(basis) == 10
     assert len(errors) == 10
     assert len(projection_matrix) == 10
+    assert len(greedy_indices) == 10
 
 
 def test_surrogate_accuracy():
