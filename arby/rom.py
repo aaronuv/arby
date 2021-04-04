@@ -132,15 +132,13 @@ class ReducedOrderModel:
 
     def _rbalg_outputs(self):
         if not hasattr(self, "_cached_rbalg_outputs"):
-            RB_data = basis.reduced_basis(
+            rbalg_outputs = basis.reduced_basis(
                 self.training_set,
                 self.physical_points,
                 self.integration_rule,
                 self.greedy_tol,
             )
-            super().__setattr__(
-                "_cached_rbalg_outputs", RB_data
-            )
+            super().__setattr__("_cached_rbalg_outputs", rbalg_outputs)
 
         return self._cached_rbalg_outputs
 
@@ -164,11 +162,17 @@ class ReducedOrderModel:
         """Projection coefficients from greedy algorithm."""
         return self._rbalg_outputs().projection_matrix
 
+    @property
+    def eim_(self):
+        """Basis empirical Interpolantion matrix."""
+        return self.basis_.eim_
+
     # ==== Surrogate Method =============================================
 
     def _spline_model(self):
         if not hasattr(self, "_cached_spline_model"):
             basis = self.basis_
+            eim = self.eim_
 
             training_compressed = np.empty(
                 (self.Ntrain_, basis.size_),
@@ -176,7 +180,7 @@ class ReducedOrderModel:
             )
 
             for i in range(self.Ntrain_):
-                for j, node in enumerate(basis.eim.nodes):
+                for j, node in enumerate(eim.nodes):
                     training_compressed[i, j] = self.training_set[i, node]
 
             h_in_nodes_splined = []
@@ -213,11 +217,11 @@ class ReducedOrderModel:
 
         """
         spline_model = self._spline_model()
-        basis = self.basis_
+        eim = self.eim_
 
         h_surr_at_nodes = np.array(
             [splev(param, spline) for spline in spline_model]
         )
-        h_surrogate = basis.eim.interpolant @ h_surr_at_nodes
+        h_surrogate = eim.interpolant @ h_surr_at_nodes
 
         return h_surrogate
