@@ -33,8 +33,7 @@ logger = logging.getLogger("arby.basis")
 EIM = namedtuple("EIM", ["interpolant", "nodes"])
 
 # Container for RB information
-RB = namedtuple("RB", ["basis", "indices",
-                       "errors", "projection_matrix"])
+RB = namedtuple("RB", ["basis", "indices", "errors", "projection_matrix"])
 
 
 @attr.s(frozen=True, hash=False)
@@ -349,9 +348,7 @@ def reduced_basis(
         quadrature rule.
 
     """
-    integration = integrals.Integration(
-        physical_points, rule=integration_rule
-    )
+    integration = integrals.Integration(physical_points, rule=integration_rule)
 
     # useful information
     Ntrain = training_set.shape[0]
@@ -404,11 +401,12 @@ def reduced_basis(
             # Prune excess allocated entries
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
             return RB(
-                basis=Basis(data=basis_data[: nn + 1],
-                            integration=integration),
+                basis=Basis(
+                    data=basis_data[: nn + 1], integration=integration
+                ),
                 indices=greedy_indices,
                 errors=greedy_errors,
-                projection_matrix=proj_matrix
+                projection_matrix=proj_matrix,
             )
 
         greedy_indices.append(next_index)
@@ -435,5 +433,5 @@ def reduced_basis(
         basis=Basis(data=basis_data[: nn + 1], integration=integration),
         indices=tuple(greedy_indices),
         errors=greedy_errors,
-        projection_matrix=proj_matrix
+        projection_matrix=proj_matrix,
     )
