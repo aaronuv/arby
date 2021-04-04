@@ -12,6 +12,8 @@ import arby
 
 import numpy as np
 
+import pytest
+
 from scipy.special import jv as BesselJ
 
 
@@ -22,9 +24,7 @@ from scipy.special import jv as BesselJ
 
 def test_basis_identity(training_set, physical_points, basis_data):
     """Test that computed basis matches stored basis for Bessel data."""
-    RB = arby.reduced_basis(
-        training_set, physical_points, greedy_tol=1e-14
-    )
+    RB = arby.reduced_basis(training_set, physical_points, greedy_tol=1e-14)
     assert len(RB.basis.data) == 10
     np.testing.assert_allclose(RB.basis.data.mean(), 0.126264, atol=1e-6)
     np.testing.assert_allclose(RB.basis.data.std(), 1.012042, atol=1e-6)
@@ -44,10 +44,10 @@ def test_eim(basis_data, physical_points):
     integration = arby.Integration(physical_points)
     basis = arby.Basis(basis_data, integration)
 
-    np.testing.assert_allclose(basis.eim.interpolant.mean(), 0.1)
-    np.testing.assert_allclose(basis.eim.interpolant.std(), 0.345161095)
+    np.testing.assert_allclose(basis.eim_.interpolant.mean(), 0.1)
+    np.testing.assert_allclose(basis.eim_.interpolant.std(), 0.345161095)
     np.testing.assert_array_equal(
-        basis.eim.nodes, [0, 100, 2, 36, 9, 72, 1, 20, 89, 4]
+        basis.eim_.nodes, [0, 100, 2, 36, 9, 72, 1, 20, 89, 4]
     )
 
 
@@ -83,23 +83,21 @@ def test_interpolate(basis_data, physical_points):
 def test_reduce_basis(training_set):
     physical_points = np.linspace(0, 1, 101)
 
-    RB = arby.reduced_basis(
-        training_set, physical_points, greedy_tol=1e-14
-    )
+    RB = arby.reduced_basis(training_set, physical_points, greedy_tol=1e-14)
     basis = RB.basis
     errors = RB.errors
     projection_matrix = RB.projection_matrix
     np.testing.assert_allclose(projection_matrix.mean(), 0.009515, atol=1e-6)
     np.testing.assert_allclose(projection_matrix.std(), 0.061853, atol=1e-6)
 
-    assert basis.eim.nodes == (0, 100, 2, 36, 9, 72, 1, 20, 89, 4)
+    assert basis.eim_.nodes == (0, 100, 2, 36, 9, 72, 1, 20, 89, 4)
 
-    assert len(basis.eim.interpolant) == 101
+    assert len(basis.eim_.interpolant) == 101
     np.testing.assert_allclose(
-        basis.eim.interpolant.mean(), 0.100000, atol=1e-6
+        basis.eim_.interpolant.mean(), 0.100000, atol=1e-6
     )
     np.testing.assert_allclose(
-        basis.eim.interpolant.std(), 0.345161, atol=1e-6
+        basis.eim_.interpolant.std(), 0.345161, atol=1e-6
     )
 
     np.testing.assert_allclose(errors.mean(), 0.004230, atol=1e-6)
@@ -115,9 +113,7 @@ def test_projector():
 
     training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
-    RB = arby.reduced_basis(
-        training, physical_points, greedy_tol=1e-12
-    )
+    RB = arby.reduced_basis(training, physical_points, greedy_tol=1e-12)
     basis = RB.basis
     # compute a random index to test Proj_operator^2 = Proj_operator
     sample = random.choice(training)
@@ -136,9 +132,7 @@ def test_interpolator():
 
     training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
-    RB = arby.reduced_basis(
-        training, physical_points, greedy_tol=1e-12
-    )
+    RB = arby.reduced_basis(training, physical_points, greedy_tol=1e-12)
     basis = RB.basis
 
     # compute a random index to test Proj_operator^2 = Proj_operator
@@ -159,9 +153,7 @@ def test_projection_error_consistency():
     training = np.array([BesselJ(nn, physical_points) for nn in nu_train])
 
     # build reduced basis
-    RB = arby.reduced_basis(
-        training, physical_points, greedy_tol=1e-12
-    )
+    RB = arby.reduced_basis(training, physical_points, greedy_tol=1e-12)
     basis = RB.basis
     # Check that projection errors of basis elements onto the basis is
     # zero
@@ -187,10 +179,33 @@ def test_greedy_already_selected():
     )
 
     # build reduced basis with exagerated greedy_tol
-    RB = arby.reduced_basis(
-        training_set, physical_points, greedy_tol=1e-20
-    )
+    RB = arby.reduced_basis(training_set, physical_points, greedy_tol=1e-20)
     basis = RB.basis
 
     np.testing.assert_allclose(basis.data.mean(), 0.09575698914482117)
     np.testing.assert_allclose(basis.data.std(), 0.9780270439748885)
+
+
+def test_gram_schmidt(basis_data):
+    """Test Gram Schmidt orthonormalization algorithm."""
+
+    physical_points = np.linspace(0, 1, 101)
+    integration = arby.Integration(interval=physical_points, rule="riemann")
+    computed_basis = arby.gram_schmidt(basis_data, integration)
+
+    np.testing.assert_allclose(
+        computed_basis, basis_data, rtol=1e-5, atol=1e-8
+    )
+
+
+def test_gram_schmidt_linear_independence(basis_data):
+
+    x = np.linspace(0, 1, 101)
+    integration = arby.Integration(interval=x, rule="riemann")
+
+    non_li_functions = basis_data[:]
+    non_li_functions[0] = basis_data[1]
+
+    # non linear independence error capturing
+    with pytest.raises(ValueError):
+        arby.gram_schmidt(basis_data, integration)

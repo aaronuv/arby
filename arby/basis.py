@@ -93,7 +93,7 @@ class Basis:
 
     @property
     @functools.lru_cache(maxsize=None)
-    def eim(self) -> EIM:
+    def eim_(self) -> EIM:
         """Empirical Interpolantion matrix.
 
         Implement the Empirical Interpolation Method [field2014fast]_ to select
@@ -187,8 +187,8 @@ class Basis:
         h_interpolated: numpy.array
             Function h interpolated at EIM nodes.
         """
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim.nodes])
-        h_interpolated = self.eim.interpolant @ h_at_nodes
+        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_.nodes])
+        h_interpolated = self.eim_.interpolant @ h_at_nodes
         return h_interpolated
 
 
