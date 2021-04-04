@@ -128,7 +128,7 @@ class ReducedOrderModel:
                     f"{self.Ntrain_} != {self.parameter_points.size}"
                 )
 
-    # ==== Reduced Basis ================================================
+    # ==== Reduced Basis and EIM =========================================
 
     def _rbalg_outputs(self):
         if not hasattr(self, "_cached_rbalg_outputs"):

@@ -1,4 +1,4 @@
-# - rom.py -
+# - basis.py -
 
 # Copyright (c) 2020, Aarón Villanueva
 # License: MIT
