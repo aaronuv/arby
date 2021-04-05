@@ -175,7 +175,7 @@ class ReducedOrderModel:
             eim = self.eim_
 
             training_compressed = np.empty(
-                (self.Ntrain_, basis.size_),
+                (self.Ntrain_, basis.Nbasis_),
                 dtype=self.training_set.dtype,
             )
 
@@ -183,15 +183,14 @@ class ReducedOrderModel:
                 for j, node in enumerate(eim.nodes):
                     training_compressed[i, j] = self.training_set[i, node]
 
-            h_in_nodes_splined = []
-            for i in range(basis.Nbasis_):
-                h_in_nodes_splined.append(
-                    splrep(
-                        self.parameter_points,
-                        training_compressed[:, i],
-                        k=self.poly_deg,
-                    )
-                )
+            h_in_nodes_splined = [
+                splrep(self.parameter_points,
+                       training_compressed[:, i],
+                       k=self.poly_deg,
+                       )
+                for i, _ in enumerate(basis.data)
+            ]
+
             super().__setattr__("_cached_spline_model", h_in_nodes_splined)
 
         return self._cached_spline_model

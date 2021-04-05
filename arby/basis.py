@@ -43,7 +43,7 @@ class Basis:
     Parameters
     ----------
     data : numpy.ndarray
-        The reduced basis of the Reduced Order Model.
+        Orthonormalized basis.
     integration: arby.integrals.Integration
         Instance of the `Integration` class.
 
@@ -67,11 +67,6 @@ class Basis:
     def Nbasis_(self) -> int:
         """Return the number of basis elements."""
         return self.data.shape[0]
-
-    @property
-    def size_(self) -> int:
-        """Return the total number of elements in the basis."""
-        return self.data.size
 
     # ====== Empirical Interpolation Method ===================================
 
