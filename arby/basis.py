@@ -44,9 +44,25 @@ class Basis:
     ----------
     data : numpy.ndarray
         Orthonormalized basis.
-    integration: arby.integrals.Integration
+    integration : arby.integrals.Integration
         Instance of the `Integration` class.
 
+    Attributes
+    ----------
+    Nbasis_ : int
+        Number of basis elements.
+    eim_ : tuple
+        Container for EIM information. It stores the `interpolant` matrix and
+        the EIM `nodes` given by the EIM algorithm.
+
+    Methods
+    -------
+    interpolate(h)
+        Interpolate a function h at EIM nodes.
+    project(h)
+        Project a function h onto the basis.
+    projection_error(h)
+        Compute the error from the projection of h onto the basis.
 
     References
     ----------
@@ -65,7 +81,7 @@ class Basis:
 
     @property
     def Nbasis_(self) -> int:
-        """Return the number of basis elements."""
+        """Number of basis elements."""
         return self.data.shape[0]
 
     # ====== Empirical Interpolation Method ===================================
@@ -89,16 +105,27 @@ class Basis:
     @property
     @functools.lru_cache(maxsize=None)
     def eim_(self) -> EIM:
-        """Empirical Interpolantion matrix.
+        """Empirical Interpolantion Method.
 
         Implement the Empirical Interpolation Method [field2014fast]_ to select
         a set of interpolation nodes from the physical interval and build an
         interpolant matrix.
 
+        Returns
+        -------
+        EIM : collections.namedtuple
+            Container storing the `interpolant` matrix and eim `nodes`.
+
         Raises
         ------
         ValueError
             If there is no basis for EIM.
+
+        References
+        ----------
+        .. [field2014fast] Scott E. Field, Chad R. Galley, Jan S. Hesthaven,
+        Jason Kaye, and Manuel Tiglio. Fast Prediction and Evaluation of
+        Gravitational Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
 
         """
         nodes = []
@@ -128,20 +155,20 @@ class Basis:
         return EIM(interpolant=interpolant, nodes=tuple(nodes))
 
     def projection_error(self, h):
-        """Square of the projection error of a function onto a basis.
+        """Squared projection error of a function h onto a basis.
 
         The error is computed in the L2 norm.
 
         Parameters
         ----------
-        h: numpy.array
+        h : np.ndarray
             Function or set of functions to be projected.
-        basis: numpy.array
+        basis : np.ndarray
             Orthonormal basis.
 
         Returns
         -------
-        l2_error: float or numpy.array
+        l2_error : float or np.ndarray
             Square of the projection error.
         """
         h_norm = self.integration.norm(h).real
@@ -152,16 +179,16 @@ class Basis:
         return l2_error
 
     def project(self, h):
-        """Project a function h on the basis.
+        """Project a function h onto the basis.
 
         Parameters
         ----------
-        h: numpy.array
+        h : np.ndarray
             Function or set of functions to be projected.
 
         Returns
         -------
-        projected_function: numpy.array
+        projected_function : np.ndarray
             Projection of h on the given basis.
         """
         projected_function = 0.0
@@ -174,12 +201,12 @@ class Basis:
 
         Parameters
         ----------
-        h: numpy.array
+        h : np.ndarray
             Function or set of functions to be interpolated.
 
         Returns
         -------
-        h_interpolated: numpy.array
+        h_interpolated : np.ndarray
             Function h interpolated at EIM nodes.
         """
         h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_.nodes])
@@ -331,9 +358,9 @@ def reduced_basis(
     -------
     basis_ : arby.Basis
         The reduced basis of the Reduced Order Model.
-    greedy_errors_: np.ndarray.
+    greedy_errors_ : np.ndarray.
         Error of the greedy algorithm.
-    projection_matrix_: np.ndarray.
+    projection_matrix_ : np.ndarray.
         Projection coefficients from the greedy algorithm.
 
     Raises
@@ -428,5 +455,5 @@ def reduced_basis(
         basis=Basis(data=basis_data[: nn + 1], integration=integration),
         indices=tuple(greedy_indices),
         errors=greedy_errors,
-        projection_matrix=proj_matrix,
+        projection_matrix=proj_matrix.transpose(),
     )
