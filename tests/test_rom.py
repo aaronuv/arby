@@ -56,7 +56,7 @@ def test_rom_rb_interface(rom_parameters):
 
     assert len(basis) == 10
     assert len(errors) == 10
-    assert len(projection_matrix) == 10
+    assert len(projection_matrix) == 101
     assert len(greedy_indices) == 10
     assert eim == bessel.basis_.eim_
 

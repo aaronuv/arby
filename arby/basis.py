@@ -47,23 +47,6 @@ class Basis:
     integration : arby.integrals.Integration
         Instance of the `Integration` class.
 
-    Attributes
-    ----------
-    Nbasis_ : int
-        Number of basis elements.
-    eim_ : tuple
-        Container for EIM information. It stores the `interpolant` matrix and
-        the EIM `nodes` given by the EIM algorithm.
-
-    Methods
-    -------
-    interpolate(h)
-        Interpolate a function h at EIM nodes.
-    project(h)
-        Project a function h onto the basis.
-    projection_error(h)
-        Compute the error from the projection of h onto the basis.
-
     References
     ----------
     .. [field2014fast] Scott E. Field, Chad R. Galley, Jan S. Hesthaven,
@@ -81,7 +64,7 @@ class Basis:
 
     @property
     def Nbasis_(self) -> int:
-        """Number of basis elements."""
+        """Return number of basis elements."""
         return self.data.shape[0]
 
     # ====== Empirical Interpolation Method ===================================
@@ -120,12 +103,6 @@ class Basis:
         ------
         ValueError
             If there is no basis for EIM.
-
-        References
-        ----------
-        .. [field2014fast] Scott E. Field, Chad R. Galley, Jan S. Hesthaven,
-        Jason Kaye, and Manuel Tiglio. Fast Prediction and Evaluation of
-        Gravitational Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
 
         """
         nodes = []

@@ -60,9 +60,35 @@ def trapezoidal_quadrature(interval):
     return nodes, (b - a) / (n - 1) * weights
 
 
+def euclidian_quadrature(interval):
+    """Uniform euclidian quadrature.
+
+    This quadrature provides discrete inner products for intrinsecally discrete
+    data.
+
+    Parameters
+    ----------
+    interval: numpy.ndarray
+        The set of points on which define the quadrature.
+
+    Returns
+    -------
+    nodes: numpy.ndarray
+        Quadrature nodes.
+    weights: numpy.ndarray
+        Quadrature weights.
+
+    """
+    n = interval.shape[0]
+    weights = np.ones(n, dtype="double")
+    nodes = interval
+    return nodes, weights
+
+
 QUADRATURES = {
     "riemann": riemann_quadrature,
     "trapezoidal": trapezoidal_quadrature,
+    "euclidian": euclidian_quadrature,
 }
 
 

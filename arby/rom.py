@@ -59,28 +59,6 @@ class ReducedOrderModel:
     poly_deg: int, optional
         Degree <= 5 of polynomials used for building splines. Default = 3.
 
-    Attributes
-    ----------
-    Nsamples_: int
-        Number of physical points.
-    Ntrain_: int
-        Number of training functions or parameter points.
-    basis_: arby.basis.Basis
-        Basis object comprising the reduced basis and handling tools.
-    greedy_indices_: tuple
-        Greedy indices from the RB lgorithm.
-    greedy_errors_: np.ndarray
-        Greedy projection errors from the RB algorithm.
-    projection_matrix_: np.ndarray
-        Matrix of projection coefficients from the RB algorithm.
-    eim_: tuple
-        Container for EIM information. It stores the `interpolant` matrix and
-        the EIM `nodes` given by the EIM algorithm.
-
-    Methods
-    -------
-    surrogate(parameter)
-        Evaluates the surrogate at `parameter`.
 
     Examples
     --------

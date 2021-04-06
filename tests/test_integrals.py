@@ -43,3 +43,24 @@ def test_trapezoidal():
         rtol=1e-5,
         atol=1e-8,
     )
+
+
+def test_euclidian():
+    """Test discrete rule."""
+    discrete_points = np.arange(1, 10)
+    dummy_array_1 = np.array(
+        [np.random.random() + 1j * np.random.random() for _ in range(9)]
+    )
+    dummy_array_2 = np.array(
+        [np.random.random() + 1j * np.random.random() for _ in range(9)]
+    )
+    discrete_quadrature = arby.Integration(
+        interval=discrete_points, rule="euclidian"
+    )
+    exact_dot_product = np.dot(dummy_array_1.conjugate(), dummy_array_2)
+    computed_dot_product = discrete_quadrature.dot(
+        dummy_array_1, dummy_array_2
+    )
+    np.testing.assert_allclose(
+        exact_dot_product, computed_dot_product, atol=1e-6
+    )
