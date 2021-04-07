@@ -22,7 +22,7 @@ from . import basis, integrals
 # ================
 
 
-# Set debbuging variable. Don't have actual implementation
+# Set debugging variable. Don't have actual implementation
 logger = logging.getLogger("arby.rom")
 
 
@@ -39,8 +39,11 @@ class ReducedOrderModel:
     empirical interpolants and predictive models from pre-computed training
     set of functions. The underlying or ground truth model describing the
     training set is a real function g(v,x) parameterized by a *training*
-    parameter v. The *physical* variable x belongs to a domain in which an
-    inner product is defined.
+    parameter v. The *physical* variable x belongs to a domain for which an
+    inner product can defined. The surrogate model is built bringing together
+    the Reduced Basis (RB) greedy algorithm and the Empirical Interpolation
+    Method (EIM) to work in synergy towards a predictive model for the ground
+    truth model.
 
     Parameters
     ----------
@@ -57,8 +60,26 @@ class ReducedOrderModel:
         The greedy tolerance as a stopping condition for the reduced basis
         greedy algorithm. Default = 1e-12.
     poly_deg: int, optional
-        Degree <= 5 of polynomials used for building splines. Default = 3.
+        Degree <= 5 of polynomials used for splines. Default = 3.
 
+    --> Attributes
+
+    Nsamples_: int
+        Number of physical points.
+    Ntrain_: int
+        Number of training functions or parameter points.
+    basis_: arby.basis.Basis
+        Basis object comprising the reduced basis and handling tools.
+    greedy_indices_: tuple
+        Greedy indices from the RB algorithm.
+    greedy_errors_: np.ndarray
+        Greedy projection errors from the RB algorithm.
+    projection_matrix_: np.ndarray
+        Matrix of projection coefficients from the RB algorithm.
+    eim_: tuple
+        Container for EIM information. It stores the `interpolant` matrix and
+        the EIM `nodes` given by the EIM algorithm.
+    -->
 
     Examples
     --------
@@ -71,16 +92,18 @@ class ReducedOrderModel:
     >>> model = ROM(training_set, physical_points, parameter_points)
 
     Build/evaluate the surrogate model. The building stage is done once and
-    for all for the first call. It could take some time for large training
+    for all at the first call. It could take some time for large training
     sets. For this reason it is called the *offline* stage. Subsequent calls
-    will invoke the already built surrogate model and just evaluate it. This
+    will invoke the already built surrogate model and just evaluates it. That
     corresponds to the *online* stage.
 
     >>> model.surrogate(parameter)
 
     For attempting to improve the model's accuracy without the addition of more
-    training functions, tune the class parameters `greedy_tol` and `poly_deg`
-    to control the precision of the reduced basis or the spline model.
+    training functions, tune the class parameters ``greedy_tol`` and
+    ``poly_deg`` to control the precision of the reduced basis
+    (see the ``arby.reduced_basis`` method) or the internal splines model.
+
     """
 
     training_set: np.ndarray = attr.ib(converter=np.asarray)
@@ -102,7 +125,7 @@ class ReducedOrderModel:
 
     @property
     def Nsamples_(self):
-        """Return the number of sample or physical points."""
+        """Return the number of samples or physical points."""
         return self.training_set.shape[1]
 
     # ==== Attrs orchestration ===========================================
@@ -144,27 +167,45 @@ class ReducedOrderModel:
 
     @property
     def basis_(self):
-        """Reduced Basis greedy algorithm implementation."""
+        """Return a reduced basis object.
+
+        The reduced basis is computed at the first call and stored as a class
+        object of ``arby.Basis``, which comprises several tools for handling
+        bases. See also the ``arby.reduced_basis`` documentation.
+
+        """
         return self._rbalg_outputs().basis
 
     @property
     def greedy_indices_(self):
-        """Greedy indices."""
+        """Greedy indices from the RB algorithm.
+
+        See the ``arby.reduced_basis`` documentation.
+
+        """
         return self._rbalg_outputs().indices
 
     @property
     def greedy_errors_(self):
-        """Greedy algorithm errors."""
+        """Errors computed in the RB algorithm.
+
+        See the ``arby.reduced_basis`` documentation.
+
+        """
         return self._rbalg_outputs().errors
 
     @property
     def projection_matrix_(self):
-        """Matrix of projection coefficients."""
+        """Projection coefficients from the RB algorithm.
+
+        See the ``arby.reduced_basis`` documentation.
+
+        """
         return self._rbalg_outputs().projection_matrix
 
     @property
     def eim_(self):
-        """EIM algorithm implementation."""
+        """Return EIM data."""
         return self.basis_.eim_
 
     # ==== Surrogate Method =============================================
@@ -184,10 +225,11 @@ class ReducedOrderModel:
                     training_compressed[i, j] = self.training_set[i, node]
 
             h_in_nodes_splined = [
-                splrep(self.parameter_points,
-                       training_compressed[:, i],
-                       k=self.poly_deg,
-                       )
+                splrep(
+                    self.parameter_points,
+                    training_compressed[:, i],
+                    k=self.poly_deg,
+                )
                 for i, _ in enumerate(basis.data)
             ]
 

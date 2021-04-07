@@ -60,10 +60,10 @@ def trapezoidal_quadrature(interval):
     return nodes, (b - a) / (n - 1) * weights
 
 
-def euclidian_quadrature(interval):
-    """Uniform euclidian quadrature.
+def euclidean_quadrature(interval):
+    """Uniform euclidean quadrature.
 
-    This quadrature provides discrete inner products for intrinsecally discrete
+    This quadrature provides discrete inner products for intrinsically discrete
     data.
 
     Parameters
@@ -88,7 +88,7 @@ def euclidian_quadrature(interval):
 QUADRATURES = {
     "riemann": riemann_quadrature,
     "trapezoidal": trapezoidal_quadrature,
-    "euclidian": euclidian_quadrature,
+    "euclidean": euclidean_quadrature,
 }
 
 
@@ -99,14 +99,23 @@ QUADRATURES = {
 
 @attr.s(frozen=True)
 class Integration:
-    """Comprise an integration scheme.
+    """Comprises an integration scheme.
+
+    This class defines a scheme to perform integrals, inner products and
+    derived operations. An integral is defined by a quadrature rule composed
+    by nodes and weights used to construct a discrete approximation to the true
+    integral (or inner product).
+
+    For completeness, an "euclidean" rule is available for which inner products
+    reduce to simple discrete dot products.
 
     Parameters
     ----------
-    interval: numpy.ndarray
-        Set of points to be used for integrals.
-    rule: str, optional
-        Quadrature rule. Default = "riemann".
+    interval : numpy.ndarray
+        Set of points to be used for integrals or inner products.
+    rule : str, optional
+        Quadrature rule. Default = "riemann". Available = ("riemann",
+        "trapezoidal", "euclidean")
 
     """
 
@@ -126,18 +135,46 @@ class Integration:
         super().__setattr__("weights_", weights)
 
     def integral(self, f):
-        """Integral of a function."""
+        """Integral of a function.
+
+        Parameters
+        ----------
+        f : np.ndarray
+            Real or complex numbers array.
+
+        """
         return np.dot(self.weights_, f)
 
     def dot(self, f, g):
-        """Dot product between a function f and an array of functions g."""
+        """Dot product between functions f and g.
+
+        Parameters
+        ----------
+        f, g : np.ndarray
+            Real or complex numbers array.
+
+        """
         return np.dot(self.weights_, (f.conjugate() * g).transpose())
 
     def norm(self, f):
-        """Norm of function."""
+        """Norm of a function.
+
+        Parameters
+        ----------
+        f : np.ndarray
+            Real or complex numbers array.
+
+        """
         f_euclid = (f.conjugate() * f).transpose().real
         return np.sqrt(np.dot(self.weights_, f_euclid))
 
     def normalize(self, f):
-        """Normalize a function."""
+        """Normalize a function.
+
+        Parameters
+        ----------
+        f : np.ndarray
+            Real or complex numbers array.
+        
+        """
         return f / self.norm(f)

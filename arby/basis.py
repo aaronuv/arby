@@ -45,13 +45,26 @@ class Basis:
     data : numpy.ndarray
         Orthonormalized basis.
     integration : arby.integrals.Integration
-        Instance of the `Integration` class.
+        Instance of the ``Integration`` class.
 
-    References
+    -->
+    Attributes
     ----------
-    .. [field2014fast] Scott E. Field, Chad R. Galley, Jan S. Hesthaven,
-        Jason Kaye, and Manuel Tiglio. Fast Prediction and Evaluation of
-        Gravitational Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
+    Nbasis_ : int
+        Number of basis elements.
+    eim_ : tuple
+        Container storing EIM information: ``Interpolant`` matrix and EIM
+        ``nodes``.
+
+    Methods
+    -------
+    interpolate(h)
+        Interpolate a function h at EIM nodes.
+    project(h)
+        Project a function h onto the basis.
+    projection_error(h)
+        Compute the error from the projection of h onto the basis.
+    -->
 
     """
 
@@ -64,7 +77,7 @@ class Basis:
 
     @property
     def Nbasis_(self) -> int:
-        """Return number of basis elements."""
+        """Return the number of basis elements."""
         return self.data.shape[0]
 
     # ====== Empirical Interpolation Method ===================================
@@ -88,21 +101,26 @@ class Basis:
     @property
     @functools.lru_cache(maxsize=None)
     def eim_(self) -> EIM:
-        """Empirical Interpolantion Method.
+        """Implement EIM algorithm.
 
-        Implement the Empirical Interpolation Method [field2014fast]_ to select
-        a set of interpolation nodes from the physical interval and build an
-        interpolant matrix.
+        The Empirical Interpolation Method (EIM) [Field2014fast]_ introspects
+        the basis and selects a set of interpolation nodes from the physical
+        domain for building an ``interpolant`` matrix using the basis and the
+        selected nodes. The ``interpolant`` matrix can be used to approximate a
+        field of functions for which the span of the basis is a good
+        approximant.
 
         Returns
         -------
         EIM : collections.namedtuple
-            Container storing the `interpolant` matrix and eim `nodes`.
+            Container storing the ``interpolant`` matrix and EIM ``nodes``.
 
-        Raises
-        ------
-        ValueError
-            If there is no basis for EIM.
+        References
+        ----------
+        .. [Field2014fast] Scott E. Field, Chad R. Galley, Jan S. Hesthaven,
+          Jason Kaye, and Manuel Tiglio. Fast Prediction and Evaluation of
+          Gravitational Waveforms Using Surrogate Models. Phys. Rev. X 4,
+          031006
 
         """
         nodes = []
@@ -132,31 +150,34 @@ class Basis:
         return EIM(interpolant=interpolant, nodes=tuple(nodes))
 
     def projection_error(self, h):
-        """Squared projection error of a function h onto a basis.
+        """Compute the squared projection error of a function h onto the basis.
 
-        The error is computed in the L2 norm.
+        The error is computed in the L2 norm (continuous case) or the 2-norm
+        (discrete case), that is, ||h - P h||^2, where P denotes the projector
+        operator associated to the basis.
 
         Parameters
         ----------
         h : np.ndarray
             Function or set of functions to be projected.
-        basis : np.ndarray
-            Orthonormal basis.
 
         Returns
         -------
-        l2_error : float or np.ndarray
+        error : float or np.ndarray
             Square of the projection error.
         """
         h_norm = self.integration.norm(h).real
         inner_prod = np.array(
             [self.integration.dot(basis_elem, h) for basis_elem in self.data]
         )
-        l2_error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
-        return l2_error
+        error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
+        return error
 
     def project(self, h):
         """Project a function h onto the basis.
+
+        This method represents the action of projecting the function h onto the
+        span of the basis.
 
         Parameters
         ----------
@@ -166,7 +187,7 @@ class Basis:
         Returns
         -------
         projected_function : np.ndarray
-            Projection of h on the given basis.
+            Projection of h onto the basis.
         """
         projected_function = 0.0
         for e in self.data:
@@ -176,6 +197,9 @@ class Basis:
     def interpolate(self, h):
         """Interpolate a function h at EIM nodes.
 
+        This method uses the basis and associated EIM nodes
+        (see the ``arby.Basis.eim_`` method) for interpolation.
+
         Parameters
         ----------
         h : np.ndarray
@@ -184,7 +208,7 @@ class Basis:
         Returns
         -------
         h_interpolated : np.ndarray
-            Function h interpolated at EIM nodes.
+            Interpolated function at EIM nodes.
         """
         h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_.nodes])
         h_interpolated = self.eim_.interpolant @ h_at_nodes
@@ -265,18 +289,18 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     """Orthonormalize a set of functions.
 
     This algorithm implements the Iterated, Modified Gram-Schmidt (GS)
-    algorithm to build an orthonormal basis from a set of functions
-    described in [hoffmann1989iterative]_.
+    algorithm [Hoffmann1989iterative]_ to build an orthonormal basis from a set
+    of functions.
 
     Parameters
     ----------
     functions : array_like, shape=(m, L)
-        Functions to be orthonormalized, where m is the number of functions
-        and L is the sample length.
+        Functions to be orthonormalized, where `m` is the number of functions
+        and `L` is the sample length.
     integration : arby.integrals.Integration
-        Instance of the `Integration` class.
+        Instance of the `Integration` class. It defines inner products.
     max_iter : int, optional
-        Maximum number of interations. Default = 3.
+        Maximum number of iterations. Default = 3.
 
     Returns
     -------
@@ -286,11 +310,11 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     Raises
     ------
     ValueError
-        If functions are not linearly independent.
+        If functions are not linearly independent to given tolerance.
 
     References
     ----------
-    .. [hoffmann1989iterative] Hoffmann, W. Iterative algorithms for
+    .. [Hoffmann1989iterative] Hoffmann, W. Iterative algorithms for
       Gram-Schmidt orthogonalization. Computing 41, 335-348 (1989).
       https://doi.org/10.1007/BF02241222
 
@@ -325,26 +349,42 @@ def reduced_basis(
     integration_rule="riemann",
     greedy_tol=1e-12,
 ) -> tuple:
-    """Reduce Basis greedy algorithm implementation.
+    """Implement the Reduce Basis greedy algorithm.
 
-    Algorithm  to build an orthonormal basis from training data. This
-    basis reproduces the training functions by means of projection within a
-    tolerance specified by the user [field2014fast]_.
+    Build an orthonormal basis out from training data. The reduced basis
+    is built for reproducing the training functions within a user specified
+    tolerance [Field2014fast]_ by linear combination of its elements. Tuning
+    the ``greedy_tol`` parameter allows to control the representation accuracy.
+
+    The ``integration_rule`` parameter specifies rules to define inner
+    products. If the training functions (rows of the ``training_set``) does not
+    correspond to continuous data (e.g. time), choose ``"euclidean"``.
+    Otherwise choose any of the quadratures defined in the ``arby.Integration``
+    class.
+
+    The output is a tuple comprising RB data: a ``basis_`` object storing the
+    reduced basis and handling tools (see ``arby.Basis``); the
+    ``greedy_errors`` corresponding to the maxima over the ``training set`` of
+    the squared projection errors at each greedy swept; and the
+    ``projection_matrix`` storing the projection coefficients generated by the
+    greedy algorithm. For example, we can recover the training set (more
+    precisely, a compressed version of it) by multiplying the projection matrix
+    with the reduced basis.
 
     Returns
     -------
     basis_ : arby.Basis
-        The reduced basis of the Reduced Order Model.
-    greedy_errors_ : np.ndarray.
-        Error of the greedy algorithm.
-    projection_matrix_ : np.ndarray.
-        Projection coefficients from the greedy algorithm.
+        The reduced basis.
+    greedy_errors_ : np.ndarray
+        Greedy algorithm errors.
+    projection_matrix_ : np.ndarray
+        Projection coefficients from greedy algorithm.
 
     Raises
     ------
     ValueError
-        If ``training_set.shape[1]`` doesn't coincide with weights of the
-        quadrature rule.
+        If ``training_set.shape[1]`` doesn't coincide with quadrature rule
+        weights.
 
     """
     integration = integrals.Integration(physical_points, rule=integration_rule)

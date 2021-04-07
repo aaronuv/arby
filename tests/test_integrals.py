@@ -45,7 +45,7 @@ def test_trapezoidal():
     )
 
 
-def test_euclidian():
+def test_euclidean():
     """Test discrete rule."""
     discrete_points = np.arange(1, 10)
     dummy_array_1 = np.array(
@@ -55,7 +55,7 @@ def test_euclidian():
         [np.random.random() + 1j * np.random.random() for _ in range(9)]
     )
     discrete_quadrature = arby.Integration(
-        interval=discrete_points, rule="euclidian"
+        interval=discrete_points, rule="euclidean"
     )
     exact_dot_product = np.dot(dummy_array_1.conjugate(), dummy_array_2)
     computed_dot_product = discrete_quadrature.dot(
