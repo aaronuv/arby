@@ -76,8 +76,8 @@ class ReducedOrderModel:
         Greedy projection errors from the RB algorithm.
     projection_matrix_: np.ndarray
         Matrix of projection coefficients from the RB algorithm.
-    eim_: tuple
-        Container for EIM information. It stores the `interpolant` matrix and
+    eim_: arby.EIM
+        Container for EIM information. Stores the `interpolant` matrix and
         the EIM `nodes` given by the EIM algorithm.
     -->
 
@@ -131,12 +131,6 @@ class ReducedOrderModel:
     # ==== Attrs orchestration ===========================================
 
     def __attrs_post_init__(self):  # noqa all the complex validators
-        # if self.Ntrain_ > self.Nsamples_:
-        #    raise ValueError(
-        #        "Number of samples must be greater than "
-        #        "number of training functions. "
-        #        f"{self.Nsamples_} <= {self.Ntrain_}"
-        #    )
         if self.Nsamples_ != self.physical_points.size:
             raise ValueError(
                 "Number of samples for each training function must be "
@@ -205,7 +199,11 @@ class ReducedOrderModel:
 
     @property
     def eim_(self):
-        """Return EIM data."""
+        """Return EIM data.
+
+        See ``arby.Basis.eim_`` documentation.
+
+        """
         return self.basis_.eim_
 
     # ==== Surrogate Method =============================================
