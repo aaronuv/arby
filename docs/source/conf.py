@@ -1,4 +1,6 @@
-# Configuration file for the Sphinx documentation builder.
+# conf.py
+
+"""Configuration file for the Sphinx documentation builder."""
 #
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
@@ -12,6 +14,7 @@
 #
 import os
 import sys
+from sphinx.ext.autodoc import between
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 
@@ -44,7 +47,7 @@ extensions = [
     "nbsphinx",
     "sphinx.ext.mathjax",
     "sphinx_copybutton"
-    ]
+]
 
 highlight_language = 'none'
 
@@ -54,7 +57,18 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', '**.ipynb_checkpoints', 'bessel.ipynb']
+exclude_patterns = ['_build', '**.ipynb_checkpoints', 'bessel.ipynb',
+                    'basis/Basis/Methods']
+
+
+# Ignore patters in renderization
+# Everything between --> will be omitted
+def setup(app):
+    """Ignore everything between lines that contain the word -->."""
+    app.connect('autodoc-process-docstring',
+                between('^.*-->.*$', exclude=True)
+                )
+    return app
 
 
 # -- Options for HTML output -------------------------------------------------

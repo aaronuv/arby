@@ -4,12 +4,18 @@ Bessel functions Jv(x)
 setup:
 
 x in [0,1]
-n = 101 
+nsamples = 101 
 rule = Riemann
+
+nu = [0, 10]
+ntrain = 101
 
 seed = 0
 tolerance = 1e-14
 
+
+training.mean() = 0.06928933426151282
+training.std() = 0.18574983807399412
 
 get:
 
@@ -30,3 +36,5 @@ Step 	 Error
 10 	 1.1874249394537697e-13
  	 7.882583474838611e-15
 
+basis.mean() = 0.1262646169812038
+basis.std() = 1.0120429553327641

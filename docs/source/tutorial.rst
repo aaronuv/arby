@@ -39,9 +39,9 @@ we will generate the sample data using scipy's Bessel special functions.
         training = np.array([BesselJ(nn, x) for nn in nu])
 
         # create a model
-        bessel_model = ROM(training_space=training,
-                           physical_interval=x,
-                           parameter_interval=nu)
+        bessel_model = ROM(training_set=training,
+                           physical_points=x,
+                           parameter_points=nu)
 
         # build and evaluate the surrogate at some parameter `par`
         bessel_par = bessel_model.surrogate(par)
@@ -140,9 +140,9 @@ parameters at the moment of generate the ``bessel_model`` object. For example,
 ::
 
         # create the model
-        bessel_model = ROM(training_space=training,
-                           physical_interval=x,
-                           parameter_interval=nu,
+        bessel_model = ROM(training_set=training,
+                           physical_points=x,
+                           parameter_points=nu,
                            greedy_tol=1e-14,
                            poly_deg=5)        
 
@@ -185,21 +185,25 @@ finite dimensional subspace capable to represent the entire training set up to a
 chosen by the user.
 
 To build a reduced basis with Arby, you just provide the training set of functions and the
-discretization of the physical variable :math:`x` to the ``ReducedOrderModel`` class.
+discretization of the physical variable :math:`x` to the ``reduced_basis`` function.
 The later is to define the integration scheme used to compute inner products. For the
 Bessel example,
 
 .. code-block:: python
 
-        bessel_model = ROM(training_space=training,
-                           physical_interval=x, greedy_tol=1e-12)
+        from arby import reduced_basis
+
+        basis, errors, projection_coefficients = reduced_basis(training_set=training,
+                           physical_points=x, greedy_tol=1e-12)
 
 The ``greedy_tol`` parameter is the accuracy in the :math:`L_2`-norm that our
-reduced basis is expected to achieve. To build the basis, just call it:
-
+reduced basis is expected to achieve. One output is a tuple storing an object ``basis``
+comprising the reduced basis and some useful methods for interacting with it. The other two
+are the greedy errors and the projection coefficients built from the greedy algorithm.
+For calling the basis do
 .. code-block:: python
 
-        reduced_basis = bessel_model.basis
+        basis.data
 
 This builds an orthonormalized basis. We can access to the *greedy points* through
 ``bessel_model.greedy_indices``. These indices mark those functions in the training
