@@ -68,7 +68,7 @@ def test_surrogate_accuracy():
     nu_validation = np.linspace(1, 10, num=1001)
     physical_points = np.linspace(0, 1, 1001)
 
-    # build traning space
+    # build training space
     training = np.array(
         [BesselJ(nn, physical_points) for nn in parameter_points]
     )

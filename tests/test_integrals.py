@@ -48,11 +48,12 @@ def test_trapezoidal():
 def test_euclidean():
     """Test discrete rule."""
     discrete_points = np.arange(1, 10)
+    random = np.random.default_rng(seed=1)
     dummy_array_1 = np.array(
-        [np.random.random() + 1j * np.random.random() for _ in range(9)]
+        [random.random() + 1j * random.random() for _ in range(9)]
     )
     dummy_array_2 = np.array(
-        [np.random.random() + 1j * np.random.random() for _ in range(9)]
+        [random.random() + 1j * random.random() for _ in range(9)]
     )
     discrete_quadrature = arby.Integration(
         interval=discrete_points, rule="euclidean"
