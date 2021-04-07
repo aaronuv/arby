@@ -175,6 +175,6 @@ class Integration:
         ----------
         f : np.ndarray
             Real or complex numbers array.
-        
+
         """
         return f / self.norm(f)
