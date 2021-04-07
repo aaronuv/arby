@@ -52,7 +52,7 @@ class Basis:
     ----------
     Nbasis_ : int
         Number of basis elements.
-    eim_ : EIM
+    eim_ : arby.basis.EIM
         Container storing EIM information: ``Interpolant`` matrix and EIM
         ``nodes``.
 
@@ -112,7 +112,7 @@ class Basis:
 
         Returns
         -------
-        arby.EIM
+        arby.basis.EIM
             Container for EIM data. Contains (``interpolant``, ``nodes``).
 
         """
@@ -356,7 +356,7 @@ def reduced_basis(
     Otherwise choose any of the quadratures defined in the ``arby.Integration``
     class.
 
-    The output RB is a container which comprises RB data: a ``basis`` object
+    The output is a container which comprises RB data: a ``basis`` object
     storing the reduced basis and handling tools (see ``arby.Basis``); the
     greedy ``errors`` corresponding to the maxima over the ``training set`` of
     the squared projection errors for each greedy swept; the greedy ``indices``
@@ -368,7 +368,7 @@ def reduced_basis(
 
     Returns
     -------
-    arby.RB
+    arby.basis.RB
         Container for RB data. Contains (``basis``, ``errors``, ``indices``,
         ``projection_matrix``).
 

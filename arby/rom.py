@@ -76,7 +76,7 @@ class ReducedOrderModel:
         Greedy projection errors from the RB algorithm.
     projection_matrix_: np.ndarray
         Matrix of projection coefficients from the RB algorithm.
-    eim_: arby.EIM
+    eim_: arby.basis.EIM
         Container for EIM information. Stores the `interpolant` matrix and
         the EIM `nodes` given by the EIM algorithm.
     -->
