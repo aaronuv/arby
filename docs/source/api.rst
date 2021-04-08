@@ -4,7 +4,28 @@ Module API
 ==========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
-.. automodule:: arby
-      :members:
+
+Module ``arby.rom``
+----------------------
+
+.. automodule:: arby.rom
+   :members:
+   :member-order: bysource
+
+
+Module ``arby.basis``
+----------------------
+
+.. automodule:: arby.basis
+   :members:
+   :member-order: bysource
+
+
+Module ``arby.integrals``
+-------------------------
+
+.. automodule:: arby.integrals
+   :members:
+   :member-order: bysource
