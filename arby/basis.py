@@ -182,8 +182,8 @@ class Basis:
         projected_function = 0.0
         for e in self.data:
             projected_function += np.tensordot(
-                                      self.integration.dot(e, h),
-                                      e, axes=0)
+                self.integration.dot(e, h), e, axes=0
+            )
         return projected_function
 
     def interpolate(self, h):
