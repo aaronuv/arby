@@ -140,7 +140,7 @@ class Basis:
         invV_matrix = np.linalg.inv(v_matrix.transpose())
         interpolant = self.data.transpose() @ invV_matrix
 
-        return EIM(interpolant=interpolant, nodes=tuple(nodes))
+        return EIM(interpolant=interpolant, nodes=nodes)
 
     def projection_error(self, h):
         """Compute the squared projection error of a function h onto the basis.
@@ -152,18 +152,20 @@ class Basis:
         Parameters
         ----------
         h : np.ndarray
-            Function or set of functions to be projected.
+            Function to be projected.
 
         Returns
         -------
-        error : float or np.ndarray
+        error : float
             Square of the projection error.
         """
-        h_norm = self.integration.norm(h).real
-        inner_prod = np.array(
-            [self.integration.dot(basis_elem, h) for basis_elem in self.data]
-        )
-        error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
+#        h_norm = self.integration.norm(h).real
+#        inner_prod = np.array(
+#            [self.integration.dot(basis_elem, h) for basis_elem in self.data]
+#        )
+#        error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
+        diff = h - self.project(h)
+        error = self.integration.dot(diff, diff)
         return error
 
     def project(self, h):
@@ -184,7 +186,11 @@ class Basis:
         """
         projected_function = 0.0
         for e in self.data:
-            projected_function += e * self.integration.dot(e, h)
+            projected_function += np.tensordot(
+                                      self.integration.dot(e, h),
+                                      e, axes=0)
+#        proj_coeffs = self.integration.dot(self.data, h).transpose()
+#        projected_function = proj_coeffs.transpose() @ self.data
         return projected_function
 
     def interpolate(self, h):
@@ -203,9 +209,10 @@ class Basis:
         h_interpolated : np.ndarray
             Interpolated function at EIM nodes.
         """
-        h_at_nodes = np.array([h[eim_node] for eim_node in self.eim_.nodes])
+        h = h.transpose()
+        h_at_nodes = h[np.array(self.eim_.nodes)]
         h_interpolated = self.eim_.interpolant @ h_at_nodes
-        return h_interpolated
+        return h_interpolated.transpose()
 
 
 # =============================================================================
@@ -468,7 +475,7 @@ def reduced_basis(
 
     return RB(
         basis=Basis(data=basis_data[: nn + 1], integration=integration),
-        indices=tuple(greedy_indices),
+        indices=greedy_indices,
         errors=greedy_errors,
         projection_matrix=proj_matrix.transpose(),
     )

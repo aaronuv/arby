@@ -90,7 +90,7 @@ def test_reduce_basis(training_set):
     np.testing.assert_allclose(projection_matrix.mean(), 0.009515, atol=1e-6)
     np.testing.assert_allclose(projection_matrix.std(), 0.061853, atol=1e-6)
 
-    assert basis.eim_.nodes == (0, 100, 2, 36, 9, 72, 1, 20, 89, 4)
+    assert basis.eim_.nodes == [0, 100, 2, 36, 9, 72, 1, 20, 89, 4]
 
     assert len(basis.eim_.interpolant) == 101
     np.testing.assert_allclose(
