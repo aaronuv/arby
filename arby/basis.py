@@ -159,11 +159,6 @@ class Basis:
         error : float
             Square of the projection error.
         """
-#        h_norm = self.integration.norm(h).real
-#        inner_prod = np.array(
-#            [self.integration.dot(basis_elem, h) for basis_elem in self.data]
-#        )
-#        error = h_norm ** 2 - np.linalg.norm(inner_prod) ** 2
         diff = h - self.project(h)
         error = self.integration.dot(diff, diff)
         return error
@@ -189,8 +184,6 @@ class Basis:
             projected_function += np.tensordot(
                                       self.integration.dot(e, h),
                                       e, axes=0)
-#        proj_coeffs = self.integration.dot(self.data, h).transpose()
-#        projected_function = proj_coeffs.transpose() @ self.data
         return projected_function
 
     def interpolate(self, h):
@@ -266,7 +259,10 @@ def _sq_proj_errors(proj_matrix, norms, Ntrain):
     proj_norms = np.array(
         [np.linalg.norm(proj_matrix[:, i]) for i in range(Ntrain)]
     )
-    proj_errors = norms ** 2 - proj_norms ** 2
+
+    proj_errors = norms**2 - proj_norms**2
+    print(f"dim = {proj_matrix.shape[0]}")
+    print(proj_errors)
     return proj_errors
 
 
@@ -420,7 +416,6 @@ def reduced_basis(
     proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_set.dtype)
 
     norms = integration.norm(training_set)
-
     # Seed
     greedy_indices = [index_seed]
     basis_data = np.empty_like(training_set)
@@ -441,7 +436,7 @@ def reduced_basis(
         nn += 1
 
         if next_index in greedy_indices:
-
+            print("greedy already selected")
             # Prune excess allocated entries
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
             return RB(
