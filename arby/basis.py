@@ -261,8 +261,6 @@ def _sq_proj_errors(proj_matrix, norms, Ntrain):
     )
 
     proj_errors = norms**2 - proj_norms**2
-    print(f"dim = {proj_matrix.shape[0]}")
-    print(proj_errors)
     return proj_errors
 
 
@@ -436,7 +434,6 @@ def reduced_basis(
         nn += 1
 
         if next_index in greedy_indices:
-            print("greedy already selected")
             # Prune excess allocated entries
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
             return RB(
