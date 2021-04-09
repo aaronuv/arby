@@ -4,7 +4,7 @@
 # License: MIT
 #   Full Text: https://gitlab.com/aaronuv/arby/-/blob/master/LICENSE
 
-"""ROM class."""
+"""Reduced Order Modeling module."""
 
 import logging
 

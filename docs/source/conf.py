@@ -64,9 +64,10 @@ exclude_patterns = ['_build', '**.ipynb_checkpoints', 'bessel.ipynb',
 # Ignore patters in renderization
 # Everything between --> will be omitted
 def setup(app):
-    """Ignore everything between lines that contain the word -->."""
+    """Ignore everything between lines that contain the WORD."""
+    WORD = '-->'
     app.connect('autodoc-process-docstring',
-                between('^.*-->.*$', exclude=True)
+                between(f'^.*{WORD}.*$', exclude=True)
                 )
     return app
 

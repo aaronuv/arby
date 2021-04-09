@@ -8,7 +8,7 @@
 # DOCS
 # =============================================================================
 
-"""Classes and functions to define integration schemes."""
+"""Integration schemes module."""
 
 # =============================================================================
 # IMPORTS
@@ -23,7 +23,7 @@ import numpy as np
 # =============================================================================
 
 
-def riemann_quadrature(interval):
+def _riemann_quadrature(interval):
     """Uniform Riemann quadrature.
 
     Parameters
@@ -48,7 +48,7 @@ def riemann_quadrature(interval):
     return nodes, (b - a) / (n - 1) * weights
 
 
-def trapezoidal_quadrature(interval):
+def _trapezoidal_quadrature(interval):
     """Uniform trapezoidal quadrature."""
     n = interval.shape[0]
     a = interval.min()
@@ -60,7 +60,7 @@ def trapezoidal_quadrature(interval):
     return nodes, (b - a) / (n - 1) * weights
 
 
-def euclidean_quadrature(interval):
+def _euclidean_quadrature(interval):
     """Uniform euclidean quadrature.
 
     This quadrature provides discrete inner products for intrinsically discrete
@@ -86,9 +86,9 @@ def euclidean_quadrature(interval):
 
 
 QUADRATURES = {
-    "riemann": riemann_quadrature,
-    "trapezoidal": trapezoidal_quadrature,
-    "euclidean": euclidean_quadrature,
+    "riemann": _riemann_quadrature,
+    "trapezoidal": _trapezoidal_quadrature,
+    "euclidean": _euclidean_quadrature,
 }
 
 
@@ -99,12 +99,12 @@ QUADRATURES = {
 
 @attr.s(frozen=True)
 class Integration:
-    """Comprises an integration scheme.
+    """Integration scheme.
 
-    This class defines a scheme to perform integrals, inner products and
+    This class fixes a frame for performing integrals, inner products and
     derived operations. An integral is defined by a quadrature rule composed
-    by nodes and weights used to construct a discrete approximation to the true
-    integral (or inner product).
+    by nodes and weights which are used to construct a discrete approximation
+    to the true integral (or inner product).
 
     For completeness, an "euclidean" rule is available for which inner products
     reduce to simple discrete dot products.
@@ -112,7 +112,7 @@ class Integration:
     Parameters
     ----------
     interval : numpy.ndarray
-        Set of points to be used for integrals or inner products.
+        Equispaced set of points as domain for integrals or inner products.
     rule : str, optional
         Quadrature rule. Default = "riemann". Available = ("riemann",
         "trapezoidal", "euclidean")
@@ -135,7 +135,7 @@ class Integration:
         super().__setattr__("weights_", weights)
 
     def integral(self, f):
-        """Integral of a function.
+        """Integrate a function.
 
         Parameters
         ----------
@@ -146,7 +146,7 @@ class Integration:
         return np.dot(self.weights_, f)
 
     def dot(self, f, g):
-        """Dot product between functions f and g.
+        """Return the dot product between functions.
 
         Parameters
         ----------
@@ -157,7 +157,7 @@ class Integration:
         return np.dot(self.weights_, (f.conjugate() * g).transpose())
 
     def norm(self, f):
-        """Norm of a function.
+        """Return the norm of a function.
 
         Parameters
         ----------
