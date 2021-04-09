@@ -81,7 +81,7 @@ parameter set. For instance, :math:`\nu = 4.30`.
 
 As we can see, the surrogate model predicts quite well the Bessel function.
 We can test the accuracy of our model in a precise sense by using the integration tools
-of Arby. We take as a metric the relative error given by :math:`L_2`-norm of the difference between the two
+of Arby. We take as metric the relative error given by :math:`L_2`-norm of the difference between the two
 models.
 
 .. math::
