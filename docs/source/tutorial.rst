@@ -50,7 +50,8 @@ Note that ``par`` does not necessarily belong to the set of training parameters.
 
 As a mode of illustration, we plot both models, the original the surrogate :math:`J_\nu(x)`
 and the surrogate :math:`J_\nu^{sur}(x)`, at some parameter values in the interval :math:`[1,5]`.
-::
+
+.. code-block:: python
 
         import matplotlib.pyplot as plt
 
@@ -94,16 +95,17 @@ donde
     \|J_\nu\|^2 := \int_{[a,b]} |J_\nu(x)|^2 dx 
 
 We compute this for an arbitrary parameter ``par`` simply by calling the ``integration``
-object defined inside the ``bessel_model``. This object comprises quadrature rules
-to define an integration scheme.
+suite defined inside the ``bessel_model.basis_`` object. It comprises quadrature rules
+to define integrals and inner products.
 ::
 
-        norm = bessel_model.integration.norm
+        norm = bessel_model.basis_.integration.norm
         L2_error = norm(BesselJ(par, x) - bessel_par)/norm(BesselJ(par, x))
 
 For ``par = 4.30`` it gives ``L2_error = 1.0434605267845736e-06``. Let us compute
 a validation benchmark for a dense parameter interval ``nu_val``.
-::
+
+.. code-block:: python
 
         # discretization 10X more dense than `nu`
         nu_val = np.linspace(1, 5, num=npoints*10)
@@ -125,19 +127,21 @@ Plot ``errors`` vs ``nu_val``.
 As we can see, the maximum error is about :math:`\sim` 1e-6 or, squared, :math:`\sim` 1e-12,
 which is the same value as the default value of the ``greedy_tol`` parameter of
 the ``ReducedOrderModel`` class:
-::
+
+.. code-block:: python
 
         bessel.greedy_tol
         >>> 1e-12
 
-This isn't a coincidence. The accuracy of the surrogate model is partly controlled
+This is not a coincidence. The surrogate model accuracy is partly controlled
 by ``greedy_tol`` (see the next section). Another parameter to improve the accuracy
 is ``poly_deg`` (Default=3) which dictates the polynomial order of the interpolation
-functions used to build the model.
+functions that are used for building the model.
 
 If we want to improve the accuracy, we just tune the ``greedy_tol`` and/or the ``poly_deg``
 parameters at the moment of generate the ``bessel_model`` object. For example,
-::
+
+.. code-block:: python
 
         # create the model
         bessel_model = ROM(training_set=training,
@@ -160,17 +164,17 @@ This time, the squared maximum error is about :math:`\sim` 1e-16!
 Build a reduced basis
 ^^^^^^^^^^^^^^^^^^^^^
 
-Lets go deeper. The Reduced Basis Method [1]_ is a reduced order modeling technique for building a
+Lets go deeper. The Reduced Basis Method [TiglioAndVillanueva2021]_ is a reduced order modeling technique for building a
 near-optimal basis of functions that spans the training set at an user-specified tolerance. 
-The basis is built by interatively choosing those training functions that best represent the entire set.
+The basis is built by iteratively choosing those training functions which best represent the entire set.
 In this way, as opposed to other dimensional reduction techniques such as Proper Orthogonal Decomposition,
 the reduced basis is directly interpretable since it is built out from training functions. Another kindness
-of this approach is that whenever we want more accuracy we just add more basis elements to the computed one.
-The construction is hierarcuical.
+of this approach is that whenever we want more accuracy we just add more basis elements to the computed one:
+the construction is hierarchical.
 
 Suppose we have a training set :math:`\{f_{\lambda_i}\}_{i=1}^N` of parameterized real
-functions. This set may represent a non-linear model, perhaps solution of PDEs. We would
-like, if possible, to reduce the dimensionality/complexity of these set by traying to find a
+functions. This set may represent a non-linear model, perhaps solutions to PDEs. We would
+like, if possible, to reduce the dimensionality/complexity of it by finding a
 compact representation in terms of linear combinations of basis elements
 :math:`\{e_i\}_{i=1}^n`, that is,
 
@@ -180,53 +184,70 @@ compact representation in terms of linear combinations of basis elements
 
 f is an arbitrary training function and the :math:`c_i`'s are the projection coefficients
 :math:`<e_i,f>` computed in some inner product :math:`<\cdot,\cdot>` on the space of functions.
-The RB method choose a set of optimal functions that belongs to the training set to build a
-finite dimensional subspace capable to represent the entire training set up to a prefixed tolerance
-chosen by the user.
+The RB method chooses a set of optimal functions belonging to the training set itself which defines a
+finite dimensional subspace capable to represent the entire training set up to a user-specified tolerance.
 
 To build a reduced basis with Arby, you just provide the training set of functions and the
 discretization of the physical variable :math:`x` to the ``reduced_basis`` function.
-The later is to define the integration scheme used to compute inner products. For the
+The later is to define the integration scheme that is used for computing inner products. For the
 Bessel example,
 
 .. code-block:: python
 
         from arby import reduced_basis
 
-        basis, errors, projection_coefficients = reduced_basis(training_set=training,
+        rb_data = reduced_basis(training_set=training,
                            physical_points=x, greedy_tol=1e-12)
 
 The ``greedy_tol`` parameter is the accuracy in the :math:`L_2`-norm that our
-reduced basis is expected to achieve. One output is a tuple storing an object ``basis``
-comprising the reduced basis and some useful methods for interacting with it. The other two
-are the greedy errors and the projection coefficients built from the greedy algorithm.
-For calling the basis do
+reduced basis is expected to achieve. The output ``rb_data`` contains all the relevant information
+related to greedy calculations. It contains a ``basis`` object which comprises the reduced basis and several
+utilities for interacting with it. The other outputs are the greedy ``errors`` and ``indices``,
+and the ``projection_matrix``, which stores projection coefficients built in the greedy algorithm.
+For example, to call the reduced basis array do
+
 .. code-block:: python
 
-        basis.data
+        rb_data.basis.data
 
-This builds an orthonormalized basis. We can access to the *greedy points* through
-``bessel_model.greedy_indices``. These indices mark those functions in the training
-set that was selected to span the approximating subspace. For stability reasons,
-they are iteratively orthonormalized in the building stage. The number of basis
-elements ``bessel_model.Nbasis`` represents the dimension of the subspace and is not
-fixed. It changes if we change the greedy tolerance. The lower the tolerance,
+The reduced basis is an orthonormalized version of the set of functions selected by the
+greedy algorithm from training data, which are indexed by the greedy indices. You can obtain
+those functions by filtering the training set
+
+.. code-block:: python
+
+        training_set[rb_data.indices]
+
+For conditioning purposes, the greedy algorithm orthonormalizes these functions using the inner product
+implied by the integration scheme.
+
+The number of basis elements ``rb_data.basis.Nbasis_`` represents the dimension of the reduced space.
+It is not a fixed quantity since we change it by modifying the greedy tolerance. The lower the tolerance,
 the bigger the number of basis elements needed to reach that accuracy. With Arby,
-we can tune the accuracy of the reduced basis through ``greedy_tol``.
+we can tune the accuracy of the reduced basis through the ``greedy_tol`` parameter.
 
-To measure the effectiveness of the reduced basis in approximatting the training
-functions we do
+To measure the effectiveness of the reduced basis in approximating the training
+set just compute the norm of difference between a training function ``f`` and its
+projected version using the tools coming inside the ``rb_data.basis`` class object.
 
 .. code-block:: python
 
-        projected_f = bessel_model.project(f, reduced_basis)
-        squared_L2_error = bessel_model.integration.norm(f - projected_f)
+        projected_f = rb_data.basis.project(f)
+        norm = rb_data.basis.integration.norm
+        L2_error = norm(f - projected_f)
 
+Or take a shortcut by doing
 
+.. code-block:: python
+
+        projection_error = rb_data.basis.projection_error
+        squared_L2_error = projection_error(f)
+
+The output is the square version of the error computed in the previous code block.
 
 References
 ----------
 
-.. [1] Scott E. Field, Chad R. Galley, Jan S. Hesthaven, Jason Kaye,
-       and Manuel Tiglio. Fast Prediction and Evaluation of Gravitational
-       Waveforms Using Surrogate Models. Phys. Rev. X 4, 031006
+.. [TiglioAndVillanueva2021] Reduced Order and Surrogate Models for
+   Gravitational Waves. Tiglio, M. and Villanueva A. arXiv:2101.11608
+   (2021)
