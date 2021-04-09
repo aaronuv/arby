@@ -29,11 +29,17 @@ logger = logging.getLogger("arby.basis")
 # Class for Basis Analysis
 # =================================
 
-# Container for EIM information
+#: Container for EIM information
 EIM = namedtuple("EIM", ["interpolant", "nodes"])
+EIM.interpolant.__doc__ = "Interpolant matrix"
+EIM.nodes.__doc__ = "EIM nodes"
 
-# Container for RB information
+#: Container for RB information
 RB = namedtuple("RB", ["basis", "indices", "errors", "projection_matrix"])
+RB.basis.__doc__ = "Reduced basis object"
+RB.indices.__doc__ = "Greedy indices"
+RB.errors.__doc__ = "Greedy errors"
+RB.projection_matrix.__doc__ = "Projection coefficients"
 
 
 @attr.s(frozen=True, hash=False)
