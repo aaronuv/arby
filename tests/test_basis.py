@@ -208,3 +208,22 @@ def test_gram_schmidt_linear_independence(basis_data):
     # non linear independence error capturing
     with pytest.raises(ValueError):
         arby.gram_schmidt(basis_data, integration)
+
+
+def test_linear_model():
+    """Test a linear model for one-element basis."""
+    nu = np.linspace(1, 5, 101)
+    x = np.linspace(1, 2, 101)
+
+    # create a training set for f(nu, x) = nu * x^2
+    training = np.array([nu * x**2 for nu in nu])
+    rb_data = arby.reduced_basis(
+        training_set=training,
+        physical_points=x,
+        greedy_tol=1e-16
+    )
+
+    assert len(rb_data.indices) == 1
+    assert rb_data.basis.Nbasis_ == 1
+    assert rb_data.errors.size == 1
+    assert rb_data.projection_matrix.shape[1] == 1
