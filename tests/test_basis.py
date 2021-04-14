@@ -179,11 +179,10 @@ def test_greedy_already_selected():
     )
 
     # build reduced basis with exagerated greedy_tol
-    RB = arby.reduced_basis(training_set, physical_points, greedy_tol=1e-20)
+    RB = arby.reduced_basis(training_set, physical_points, greedy_tol=1e-30)
     basis = RB.basis
 
-    np.testing.assert_allclose(basis.data.mean(), 0.10040373410554827)
-    np.testing.assert_allclose(basis.data.std(), 1.0177659702510666)
+    assert basis.Nbasis_ == 14
 
 
 def test_gram_schmidt(basis_data):
