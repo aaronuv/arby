@@ -21,6 +21,14 @@ from scipy.special import jv as BesselJ
 # TESTS
 # =============================================================================
 
+def test_wrong_Nsamples(rom_parameters):
+    """Test input consistency."""
+    rom_parameters.update(physical_points=np.linspace(0, 1, 11))
+    with pytest.raises(ValueError):
+        arby.reduced_basis(
+            training_set=rom_parameters['training_set'],
+            physical_points=rom_parameters['physical_points'])
+
 
 def test_basis_identity(training_set, physical_points, basis_data):
     """Test that computed basis matches stored basis for Bessel data."""
