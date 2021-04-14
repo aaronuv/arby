@@ -421,7 +421,6 @@ def reduced_basis(
 
     # Allocate memory for greedy algorithm arrays
     greedy_errors = np.empty(Ntrain, dtype="double")
-    basisnorms = np.empty(Ntrain, dtype="double")
     proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_set.dtype)
 
     norms = integration.norm(training_set)
@@ -430,7 +429,6 @@ def reduced_basis(
     basis_data = np.empty_like(training_set)
     basis_data[0] = training_set[index_seed] / norms[index_seed]
 
-    basisnorms[0] = norms[index_seed]
     proj_matrix[0] = integration.dot(basis_data[0], training_set)
 
     errs = _sq_proj_errors(proj_matrix[:1], norms=norms, Ntrain=Ntrain)
@@ -457,7 +455,7 @@ def reduced_basis(
             )
 
         greedy_indices.append(next_index)
-        basis_data[nn], basisnorms[nn] = _gs_one_element(
+        basis_data[nn], _ = _gs_one_element(
             training_set[greedy_indices[nn]],
             basis_data[:nn],
             integration,
