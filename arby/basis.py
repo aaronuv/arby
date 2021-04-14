@@ -449,7 +449,7 @@ def reduced_basis(
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
             return RB(
                 basis=Basis(
-                    data=basis_data[: nn + 1], integration=integration
+                    data=basis_data[: nn], integration=integration
                 ),
                 indices=greedy_indices,
                 errors=greedy_errors,

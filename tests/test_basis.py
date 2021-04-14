@@ -182,8 +182,8 @@ def test_greedy_already_selected():
     RB = arby.reduced_basis(training_set, physical_points, greedy_tol=1e-20)
     basis = RB.basis
 
-    np.testing.assert_allclose(basis.data.mean(), 0.09575698914482117)
-    np.testing.assert_allclose(basis.data.std(), 0.9780270439748885)
+    np.testing.assert_allclose(basis.data.mean(), 0.10040373410554827)
+    np.testing.assert_allclose(basis.data.std(), 1.0177659702510666)
 
 
 def test_gram_schmidt(basis_data):

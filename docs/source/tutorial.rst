@@ -164,7 +164,7 @@ This time, the squared maximum error is about :math:`\sim` 1e-16!
 Build a reduced basis
 ^^^^^^^^^^^^^^^^^^^^^
 
-Lets go deeper. The Reduced Basis Method [TiglioAndVillanueva2021]_ is a reduced order modeling technique for building a
+Lets go deeper. The Reduced Basis Method [#TiglioAndVillanueva2021]_ is a reduced order modeling technique for building a
 near-optimal basis of functions that spans the training set at an user-specified tolerance. 
 The basis is built by iteratively choosing those training functions which best represent the entire set.
 In this way, as opposed to other dimensional reduction techniques such as Proper Orthogonal Decomposition,
@@ -248,6 +248,6 @@ The output is the square version of the error computed in the previous code bloc
 References
 ----------
 
-.. [TiglioAndVillanueva2021] Reduced Order and Surrogate Models for
+.. [#TiglioAndVillanueva2021] Reduced Order and Surrogate Models for
    Gravitational Waves. Tiglio, M. and Villanueva A. arXiv:2101.11608
    (2021)
