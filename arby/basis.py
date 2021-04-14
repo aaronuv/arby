@@ -250,28 +250,28 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     return e / new_norm, new_norm
 
 
-def _sq_proj_errors(proj_matrix, norms, Ntrain):
-    """Square of projection errors.
+def _sq_proj_errors(training, proj_matrix, basis, dot_product):
+    """Square of projection errors from precomputed projection coefficients.
 
     Parameters
     ----------
-    proj_matrix : numpy.ndarray, shape=(n,`Ntrain`)
-        Stores the projection coefficients of the training functions. n
-        is the number of basis elements.
-    norms : numpy.ndarray, shape=(`Ntrain`)
-        Stores the norms of the training functions.
+    training : numpy.ndarray
+    proj_matrix : numpy.ndarray
+        Stores the projection coefficients of the training functions.
+    basis : numpy.ndarray
+        Basis elements.
+    dot_product : arby.Integration.dot
+        Inherited dot product.
 
     Returns
     -------
-    proj_errors : numpy.ndarray, shape=(`Ntrain`)
+    proj_errors : numpy.ndarray
         Squared projection errors.
     """
-    proj_norms = np.array(
-        [np.linalg.norm(proj_matrix[:, i]) for i in range(Ntrain)]
-    )
+    projected_training = proj_matrix.transpose() @ basis
+    diff = training - projected_training
 
-    proj_errors = norms ** 2 - proj_norms ** 2
-    return proj_errors
+    return dot_product(diff, diff)
 
 
 def _prune(greedy_errors, proj_matrix, num):
@@ -423,15 +423,19 @@ def reduced_basis(
     greedy_errors = np.empty(Ntrain, dtype="double")
     proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_set.dtype)
 
-    norms = integration.norm(training_set)
     # Seed
     greedy_indices = [index_seed]
     basis_data = np.empty_like(training_set)
-    basis_data[0] = training_set[index_seed] / norms[index_seed]
+    basis_data[0] = integration.normalize(training_set[index_seed])
 
     proj_matrix[0] = integration.dot(basis_data[0], training_set)
 
-    errs = _sq_proj_errors(proj_matrix[:1], norms=norms, Ntrain=Ntrain)
+    errs = _sq_proj_errors(
+        training_set,
+        proj_matrix[:1],
+        basis_data[:1],
+        integration.dot
+    )
     next_index = np.argmax(errs)
     greedy_errors[0] = errs[next_index]
     sigma = greedy_errors[0]
@@ -462,7 +466,10 @@ def reduced_basis(
         )
         proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
         errs = _sq_proj_errors(
-            proj_matrix[: nn + 1], norms=norms, Ntrain=Ntrain
+            training_set,
+            proj_matrix[:nn + 1],
+            basis_data[:nn + 1],
+            integration.dot
         )
         next_index = np.argmax(errs)
         greedy_errors[nn] = errs[next_index]
