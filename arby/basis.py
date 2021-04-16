@@ -271,7 +271,7 @@ def _sq_proj_errors(training, proj_matrix, basis, dot_product):
     projected_training = proj_matrix.transpose() @ basis
     diff = training - projected_training
 
-    return dot_product(diff, diff)
+    return np.real(dot_product(diff, diff))
 
 
 def _prune(greedy_errors, proj_matrix, num):
