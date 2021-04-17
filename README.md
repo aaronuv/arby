@@ -17,6 +17,10 @@ This module implements a type of [Reduced Order Modeling](https://en.wikipedia.o
 
     pip install arby
 
+or, after cloning this repo, execute inside the directory
+
+    pip install -e .
+
 # Quick Usage
 
 Suppose we have a set of real functions parametrized by a real number &lambda;. This set,
@@ -40,7 +44,7 @@ training_set = [f(par, x_samples) for par in params]
 ```
 that has shape (`Ntrain`,`Nsamples`).
 
-Finally, we build the surrogate model simply by doing:
+Finally, we build the surrogate model by executing:
 
     from arby import ReducedOrderModel as ROM
     f_model = ROM(training_space=training_set,
@@ -61,10 +65,6 @@ For more details and examples check the [read the docs](https://arby.readthedocs
 # License
 
 MIT
-
-# Contributors
-
-[@aaronuv](https://gitlab.com/aaronuv) 
 
 # Contact Us
 
