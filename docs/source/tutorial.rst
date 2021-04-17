@@ -15,7 +15,7 @@ differential equation with a free parameter :math:`\nu`.
     x^2 \frac{d^2f}{dx^2} + x \frac{df}{dx} + (x^2 - \nu^2)f = 0
 
 Suppose we have numerical solutions :math:`J_{\nu}(x)` for particular values of
-the parameter :math:`\nu`, say, for a discretized interval :math:`[1, 5]` with
+the parameter :math:`\nu`, i.e., for a discretized interval :math:`[1, 5]` with
 101 samples, defined in some interval for :math:`x`. For convention, we will
 refer to :math:`\nu` as the parameter variable and :math:`x` as the physical one.
 So each one belongs to a parameter space and a physical domain, respectively.
@@ -70,7 +70,7 @@ and the surrogate :math:`J_\nu^{sur}(x)`, at some parameter values in the interv
     :alt: bessel representation
 
 This plot represents an *in-sample* validation. To see the predictive power of our model, we have to test
-it in an *out-of-sample* manner, say, by plotting at parameters that are not present in the training
+it in an *out-of-sample* manner, i.e., by plotting at parameters that are not present in the training
 parameter set. For instance, :math:`\nu = 4.30`.
 
 .. image:: _static/bessel_sur_pred.png
@@ -112,7 +112,7 @@ a validation benchmark for a dense parameter interval ``nu_val``.
 
         # compute errors for `nu_eval`
         errors = np.array(
-            [norm(BesselJ(par, x) - bessel.surrogate(par))/norm(BesselJ(par, x))
+            [norm(BesselJ(par, x) - bessel_model.surrogate(par))/norm(BesselJ(par, x))
             for par in nu_val]
             )
 
@@ -130,7 +130,7 @@ the ``ReducedOrderModel`` class:
 
 .. code-block:: python
 
-        bessel.greedy_tol
+        bessel_model.greedy_tol
         >>> 1e-12
 
 This is not a coincidence. The surrogate model accuracy is partly controlled
