@@ -7,3 +7,5 @@ exclude .travis.ylm
 recursive-exclude tests *
 recursive-exclude docs *
 recursive-exclude res *
+recursive-exclude benchmark *
+recursive-exclude bm_results *
