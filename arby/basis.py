@@ -8,7 +8,6 @@
 
 import functools
 import logging
-from collections import namedtuple
 
 import attr
 
@@ -24,22 +23,49 @@ from . import integrals
 
 logger = logging.getLogger("arby.basis")
 
-
 # =================================
 # Class for Basis Analysis
 # =================================
 
-#: Container for EIM information
-EIM = namedtuple("EIM", ["interpolant", "nodes"])
-EIM.interpolant.__doc__ = "Interpolant matrix."
-EIM.nodes.__doc__ = "EIM nodes."
 
-#: Container for RB information
-RB = namedtuple("RB", ["basis", "indices", "errors", "projection_matrix"])
-RB.basis.__doc__ = "Reduced basis object."
-RB.indices.__doc__ = "Greedy indices."
-RB.errors.__doc__ = "Greedy errors."
-RB.projection_matrix.__doc__ = "Projection coefficients."
+@attr.s(frozen=True, hash=False, slots=True)
+class EIM:
+    """Container for EIM information.
+
+    Parameters
+    ----------
+    interpolant: numpy.ndarray
+        Interpolant matrix.
+
+    nodes: list
+        EIM nodes.
+    """
+
+    interpolant: np.ndarray = attr.ib()
+    nodes: list = attr.ib()
+
+
+@attr.s(frozen=True, hash=False, slots=True)
+class RB:
+    """Container for RB information.
+
+    Parameters
+    ----------
+    basis: np.ndarray
+        Reduced basis object.
+    indices: np.ndarray
+        Greedy indices.
+    errors: np.ndarray
+        Greedy errors.
+    projection_matrix: np.ndarray
+        Projection coefficients.
+
+    """
+
+    basis: np.ndarray = attr.ib()
+    indices: np.ndarray = attr.ib()
+    errors: np.ndarray = attr.ib()
+    projection_matrix: np.ndarray = attr.ib()
 
 
 @attr.s(frozen=True, hash=False)
@@ -431,10 +457,7 @@ def reduced_basis(
     proj_matrix[0] = integration.dot(basis_data[0], training_set)
 
     errs = _sq_proj_errors(
-        training_set,
-        proj_matrix[:1],
-        basis_data[:1],
-        integration.dot
+        training_set, proj_matrix[:1], basis_data[:1], integration.dot
     )
     next_index = np.argmax(errs)
     greedy_errors[0] = errs[next_index]
@@ -450,9 +473,7 @@ def reduced_basis(
             # Prune excess allocated entries
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
             return RB(
-                basis=Basis(
-                    data=basis_data[: nn], integration=integration
-                ),
+                basis=Basis(data=basis_data[:nn], integration=integration),
                 indices=greedy_indices,
                 errors=greedy_errors,
                 projection_matrix=proj_matrix,
@@ -467,9 +488,9 @@ def reduced_basis(
         proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
         errs = _sq_proj_errors(
             training_set,
-            proj_matrix[:nn + 1],
-            basis_data[:nn + 1],
-            integration.dot
+            proj_matrix[: nn + 1],
+            basis_data[: nn + 1],
+            integration.dot,
         )
         next_index = np.argmax(errs)
         greedy_errors[nn] = errs[next_index]
