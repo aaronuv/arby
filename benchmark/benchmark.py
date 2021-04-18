@@ -18,13 +18,14 @@ import pytest
 # =============================================================================
 
 
-@pytest.mark.parametrize("iteration", range(3))  # repite cada test 100 veces
+@pytest.mark.parametrize("iteration", range(100))  # repite cada test 100 veces
 @pytest.mark.parametrize(
     "training_set_shape",
     [
         (11, 11),
-        # (101, 101),
-        # (1001, 1001), (10001, 10001)
+        (101, 101),
+        (1001, 1001),
+        (10001, 10001)
     ],
 )
 @pytest.mark.parametrize(
