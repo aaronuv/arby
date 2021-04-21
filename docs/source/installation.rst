@@ -7,7 +7,7 @@ To install the latest stable version of Arby from PyPI::
 
 To install the developer version (may be unstable)::
 
-    $ git clone https://gitlab.com/aaronuv/arby.git
+    $ git clone https://github.com/aaronuv/arby.git
     $ cd arby
     $ pip install .
 
