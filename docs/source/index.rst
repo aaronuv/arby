@@ -28,7 +28,7 @@ Arby's documentation
    :alt: Curso doctoral FAMAF: Diseño de software para cómputo científico
 
 
-`Arby <https://gitlab.com/aaronuv/arby>`_ is a fully data-driven Python module
+`Arby <https://github.com/aaronuv/arby>`_ is a fully data-driven Python module
 to construct surrogate models, reduced bases and empirical interpolants from training data.
 
 This module implements a type of `Reduced Order Modeling <https://en.wikipedia.org/wiki/Model_order_reduction>`_
