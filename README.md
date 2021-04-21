@@ -47,9 +47,9 @@ that has shape (`Ntrain`,`Nsamples`).
 Finally, we build the surrogate model by executing:
 
     from arby import ReducedOrderModel as ROM
-    f_model = ROM(training_space=training_set,
-                  physical_interval=x_samples,
-                  parameter_interval=params)
+    f_model = ROM(training_set=training_set,
+                  physical_points=x_samples,
+                  parameter_points=params)
     
 With `f_model` we can get function samples for any parameter `par` in the
 interval [`par_min`, `par_max`] simply by calling it:
