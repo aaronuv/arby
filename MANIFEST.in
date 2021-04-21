@@ -9,3 +9,4 @@ recursive-exclude docs *
 recursive-exclude res *
 recursive-exclude benchmark *
 recursive-exclude bm_results *
+recursive-exclude profiling *
