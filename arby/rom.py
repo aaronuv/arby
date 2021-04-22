@@ -218,9 +218,7 @@ class ReducedOrderModel:
                 dtype=self.training_set.dtype,
             )
 
-            for i in range(self.Ntrain_):
-                for j, node in enumerate(eim.nodes):
-                    training_compressed[i, j] = self.training_set[i, node]
+            training_compressed = self.training_set[:, eim.nodes]
 
             h_in_nodes_splined = [
                 splrep(
@@ -255,11 +253,11 @@ class ReducedOrderModel:
             The evaluated surrogate function for the given parameters.
 
         """
-        spline_model = self._spline_model()
+        fit_model = self._spline_model()
         eim = self.eim_
 
         h_surr_at_nodes = np.array(
-            [splev(param, spline) for spline in spline_model]
+            [splev(param, spline) for spline in fit_model]
         )
         h_surrogate = eim.interpolant @ h_surr_at_nodes
 
