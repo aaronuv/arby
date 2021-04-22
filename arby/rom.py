@@ -253,11 +253,11 @@ class ReducedOrderModel:
             The evaluated surrogate function for the given parameters.
 
         """
-        fit_model = self._spline_model()
+        fitted_model = self._spline_model()
         eim = self.eim_
 
         h_surr_at_nodes = np.array(
-            [splev(param, spline) for spline in fit_model]
+            [splev(param, spline) for spline in fitted_model]
         )
         h_surrogate = eim.interpolant @ h_surr_at_nodes
 
