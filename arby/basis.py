@@ -286,12 +286,15 @@ def _sq_proj_errors(training,
     Parameters
     ----------
     training : numpy.ndarray
-    proj_matrix : numpy.ndarray
-        Stores the projection coefficients of the training functions.
-    basis : numpy.ndarray
-        Basis elements.
+    proj_vector : numpy.ndarray
+        Stores projection coefficients of training functions onto the actual
+        basis.
+    basis_element : numpy.ndarray
+        Actual basis element.
     dot_product : arby.Integration.dot
         Inherited dot product.
+    projected_training : numpy.ndarray
+        Projected training set aiming to be actualized.
 
     Returns
     -------
@@ -302,10 +305,11 @@ def _sq_proj_errors(training,
     basis_element_h = basis_element.reshape(1, -1)
 
     if projected_training is None:
-	    projected_training = proj_vector_v @ basis_element_h
+        projected_training = proj_vector_v @ basis_element_h
     else:
-        next_proj = proj_vector_v @ basis_element_h
-        projected_training = np.add(projected_training, next_proj)
+        projected_training = np.add(projected_training,
+                                    proj_vector_v @ basis_element_h
+                                    )
 
     diff = training - projected_training
 
@@ -467,12 +471,12 @@ def reduced_basis(
     basis_data[0] = integration.normalize(training_set[index_seed])
 
     proj_matrix[0] = integration.dot(basis_data[0], training_set)
-    errs, projected_training = _sq_proj_errors(    
+    errs, projected_training = _sq_proj_errors(
         training_set,
         proj_matrix[0],
         basis_data[0],
         integration.dot
-        )
+    )
 
     next_index = np.argmax(errs)
     greedy_errors[0] = errs[next_index]
