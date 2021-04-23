@@ -304,7 +304,8 @@ def _sq_proj_errors(training,
     if projected_training is None:
 	    projected_training = proj_vector_v @ basis_element_h
     else:
-        projected_training += proj_vector_v @ basis_element_h
+        next_proj = proj_vector_v @ basis_element_h
+        projected_training = np.add(projected_training, next_proj)
 
     diff = training - projected_training
 
