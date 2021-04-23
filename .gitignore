@@ -103,3 +103,5 @@ venv.bak/
 # mypy
 .mypy_cache/
 .vscode/settings.json
+bm_results/*.json
+bm_results/*.pdf
