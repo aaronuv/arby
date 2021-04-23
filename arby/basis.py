@@ -239,7 +239,7 @@ class Basis:
             Interpolated function at EIM nodes.
         """
         h = h.transpose()
-        h_at_nodes = h[np.array(self.eim_.nodes)]
+        h_at_nodes = h[self.eim_.nodes]
         h_interpolated = self.eim_.interpolant @ h_at_nodes
         return h_interpolated.transpose()
 
