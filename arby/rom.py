@@ -213,11 +213,6 @@ class ReducedOrderModel:
             basis = self.basis_
             eim = self.eim_
 
-            training_compressed = np.empty(
-                (self.Ntrain_, basis.Nbasis_),
-                dtype=self.training_set.dtype,
-            )
-
             training_compressed = self.training_set[:, eim.nodes]
 
             h_in_nodes_splined = [
