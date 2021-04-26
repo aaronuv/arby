@@ -300,10 +300,9 @@ def _sq_proj_errors(proj_vector,
     proj_errors : numpy.ndarray
         Squared projection errors.
     """
-
     diff_training = np.subtract(
-      diff_training, np.tensordot(proj_vector, basis_element, axes=0)
-      )
+        diff_training, np.tensordot(proj_vector, basis_element, axes=0)
+    )
     return np.real(dot_product(diff_training, diff_training)), diff_training
 
 
