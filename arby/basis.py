@@ -487,7 +487,7 @@ def reduced_basis(
                 basis=Basis(data=basis_data[:nn], integration=integration),
                 indices=greedy_indices,
                 errors=greedy_errors,
-                projection_matrix=proj_matrix,
+                projection_matrix=proj_matrix.transpose(),
             )
 
         greedy_indices.append(next_index)
