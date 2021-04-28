@@ -268,7 +268,7 @@ def _gs_one_element(h, basis, integration, max_iter=3):
             if n_iters > max_iter:
                 raise StopIteration(
                     "Gram-Schmidt algorithm: max number of "
-                    "iterations reached ({}).".format(max_iter)
+                    f"iterations reached ({max_iter})."
                 )
         else:
             continue_loop = False
@@ -276,14 +276,14 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     return e / new_norm, new_norm
 
 
-def _sq_proj_errors(proj_vector,
-                    basis_element,
-                    dot_product,
-                    diff_training):
+def _sq_proj_errors(
+    training, proj_vector, basis_element, dot_product, projected_training=None
+):
     """Square of projection errors from precomputed projection coefficients.
 
     Parameters
     ----------
+    training : numpy.ndarray
     proj_vector : numpy.ndarray
         Stores projection coefficients of training functions onto the actual
         basis.
@@ -291,19 +291,27 @@ def _sq_proj_errors(proj_vector,
         Actual basis element.
     dot_product : arby.Integration.dot
         Inherited dot product.
-    diff_training : numpy.ndarray
-        Difference between training set and projected set aiming to be
-        actualized.
+    projected_training : numpy.ndarray
+        Projected training set aiming to be actualized.
 
     Returns
     -------
     proj_errors : numpy.ndarray
         Squared projection errors.
     """
-    diff_training = np.subtract(
-        diff_training, np.tensordot(proj_vector, basis_element, axes=0)
-    )
-    return np.real(dot_product(diff_training, diff_training)), diff_training
+    proj_vector_v = proj_vector.reshape(-1, 1)
+    basis_element_h = basis_element.reshape(1, -1)
+
+    if projected_training is None:
+        projected_training = proj_vector_v @ basis_element_h
+    else:
+        projected_training = np.add(
+            projected_training, proj_vector_v @ basis_element_h
+        )
+
+    diff = training - projected_training
+
+    return np.real(dot_product(diff, diff)), projected_training
 
 
 def _prune(greedy_errors, proj_matrix, num):
@@ -363,18 +371,20 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     if np.min(svds) < linear_indep_tol:
         raise ValueError("Functions are not linearly independent.")
 
-    ortho_basis = []
+    basis_data = np.zeros(functions.shape, dtype=functions.dtype)
 
     # First element of the basis is special, it's just normalized
-    ortho_basis.append(integration.normalize(functions[0]))
+    basis_data[0] = integration.normalize(functions[0])
 
     # For the rest of basis elements add them one by one by extending basis
-    for new_basis_elem in functions[1:]:
-        projected_element, _ = _gs_one_element(
-            new_basis_elem, ortho_basis, integration, max_iter
-        )
-        ortho_basis.append(projected_element)
-    basis_data = np.array(ortho_basis)
+    def gs_one_element(row):
+        return _gs_one_element(
+            row, basis=basis_data, integration=integration, max_iter=max_iter
+        )[0]
+
+    basis_data[1:] = np.apply_along_axis(
+        gs_one_element, axis=1, arr=functions[1:]
+    )
 
     return basis_data
 
@@ -461,13 +471,8 @@ def reduced_basis(
     basis_data[0] = integration.normalize(training_set[index_seed])
 
     proj_matrix[0] = integration.dot(basis_data[0], training_set)
-
-    # the first diff matrix is the training set itself
-    errs, diff_training = _sq_proj_errors(
-        proj_matrix[0],
-        basis_data[0],
-        integration.dot,
-        training_set
+    errs, projected_training = _sq_proj_errors(
+        training_set, proj_matrix[0], basis_data[0], integration.dot
     )
 
     next_index = np.argmax(errs)
@@ -498,11 +503,12 @@ def reduced_basis(
         )
         proj_vector = integration.dot(basis_data[nn], training_set)
         proj_matrix[nn] = proj_vector
-        errs, diff_training = _sq_proj_errors(
+        errs, projected_training = _sq_proj_errors(
+            training_set,
             proj_matrix[nn],
             basis_data[nn],
             integration.dot,
-            diff_training
+            projected_training=projected_training,
         )
         next_index = np.argmax(errs)
         greedy_errors[nn] = errs[next_index]
