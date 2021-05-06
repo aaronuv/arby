@@ -276,11 +276,12 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     return e / new_norm, new_norm
 
 
-def _sq_proj_errors(proj_vector,
-                    basis_element,
-                    dot_product,
-                    diff_training):
+def _sq_errs_abs(proj_vector, basis_element, dot_product, diff_training):
     """Square of projection errors from precomputed projection coefficients.
+
+    Since the training set is not a-priori normalized, this function computes
+    errors computing the squared norm of the difference between training set
+    and the approximation. This method trades accuracy by memory.
 
     Parameters
     ----------
@@ -299,11 +300,36 @@ def _sq_proj_errors(proj_vector,
     -------
     proj_errors : numpy.ndarray
         Squared projection errors.
+    diff_training : numpy.ndarray
+        Actualized difference training set and projected set.
     """
     diff_training = np.subtract(
         diff_training, np.tensordot(proj_vector, basis_element, axes=0)
     )
     return np.real(dot_product(diff_training, diff_training)), diff_training
+
+
+def _sq_errs_rel(errs, proj_vector):
+    """Square of projection errors from precomputed projection coefficients.
+
+    This function takes advantage of an orthonormalized basis and a normalized
+    training set to compute fewer floating-point operations than in the
+    non-normalized case.
+
+    Parameters
+    ----------
+    errs : numpy.array
+        Projection errors.
+    proj_vector : numpy.ndarray
+        Stores the projection coefficients of the training set onto the actual
+        basis element.
+
+    Returns
+    -------
+    proj_errors : numpy.ndarray
+        Squared projection errors.
+    """
+    return np.subtract(errs, np.abs(proj_vector) ** 2)
 
 
 def _prune(greedy_errors, proj_matrix, num):
@@ -386,21 +412,27 @@ def reduced_basis(
     physical_points,
     integration_rule="riemann",
     greedy_tol=1e-12,
+    normalize=False,
 ) -> RB:
     """Build a reduced basis from training data.
 
-    This function implements the Reduce Basis (RB) greedy algorithm for
+    This function implements the Reduced Basis (RB) greedy algorithm for
     building an orthonormalized reduced basis out from training data. The basis
     is built for reproducing the training functions within a user specified
-    tolerance [TiglioAndVillanueva2021]_ by linear combination of its elements.
-    Tuning the ``greedy_tol`` parameter allows to control the representation
-    accuracy of the basis.
+    tolerance [TiglioAndVillanueva2021]_ by linear combinations of its
+    elements. Tuning the ``greedy_tol`` parameter allows to control the
+    representation accuracy of the basis.
 
-    The ``integration_rule`` parameter specifies the rule that defines inner
+    The ``integration_rule`` parameter specifies the rule for defining inner
     products. If the training functions (rows of the ``training_set``) does not
     correspond to continuous data (e.g. time), choose ``"euclidean"``.
     Otherwise choose any of the quadratures defined in the ``arby.Integration``
     class.
+
+    Set the boolean ``normalize`` to True if you want to normalize the training
+    set before running the greedy algorithm. This condition not only emphasizes
+    on structure over scale but may leads to noticeable speedups for large
+    datasets.
 
     The output is a container which comprises RB data: a ``basis`` object
     storing the reduced basis and handling tools (see ``arby.Basis``); the
@@ -411,6 +443,21 @@ def reduced_basis(
     by the greedy algorithm. For example, we can recover the training set (more
     precisely, a compressed version of it) by multiplying the projection matrix
     with the reduced basis.
+
+    Parameters
+    ----------
+    training_set : numpy.ndarray
+        The training set of functions.
+    physical_points : numpy.ndarray
+        Physical points for quadrature rules.
+    integration_rule : str, optional
+        The quadrature rule to define an integration scheme.
+        Default = "riemann".
+    greedy_tol : float, optional
+        The greedy tolerance as a stopping condition for the reduced basis
+        greedy algorithm. Default = 1e-12.
+    normalize : bool, optional
+        True if you want to normalize the training set. Default = False.
 
     Returns
     -------
@@ -423,6 +470,12 @@ def reduced_basis(
     ValueError
         If ``training_set.shape[1]`` doesn't coincide with quadrature rule
         weights.
+
+    Notes
+    -----
+    If ``normalize`` is True, the projection coefficients are with respect to
+    the original basis but the greedy errors are relative to the normalized
+    training set.
 
     References
     ----------
@@ -450,7 +503,7 @@ def reduced_basis(
     index_seed = 0
     seed_function = training_set[index_seed]
 
-    while index_seed < Ntrain:
+    while index_seed < Ntrain - 1:
         if np.allclose(np.abs(seed_function), 0):
             index_seed += 1
             seed_function = training_set[index_seed]
@@ -467,17 +520,26 @@ def reduced_basis(
     # seed
     greedy_indices = [index_seed]
     basis_data[0] = integration.normalize(training_set[index_seed])
-    proj_matrix[0] = integration.dot(basis_data[0], training_set)
 
     # ====== First greedy loop ======
+    if normalize:
+        norms = integration.norm(training_set)
+        training_set = np.array(
+            [
+                h if np.allclose(h, 0, atol=1e-15) else h / norms[i]
+                for i, h in enumerate(training_set)
+            ]
+        )
+        proj_matrix[0] = integration.dot(basis_data[0], training_set)
+        sq_errors = _sq_errs_rel
+        errs = sq_errors(np.ones(Ntrain), proj_matrix[0])
 
-    # the first diff matrix is the training set itself
-    errs, diff_training = _sq_proj_errors(
-        proj_matrix[0],
-        basis_data[0],
-        integration.dot,
-        training_set
-    )
+    else:
+        proj_matrix[0] = integration.dot(basis_data[0], training_set)
+        sq_errors = _sq_errs_abs
+        errs, diff_training = sq_errors(
+            proj_matrix[0], basis_data[0], integration.dot, training_set
+        )
 
     next_index = np.argmax(errs)
     greedy_errors[0] = errs[next_index]
@@ -492,6 +554,9 @@ def reduced_basis(
         if next_index in greedy_indices:
             # Prune excess allocated entries
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
+            if normalize:
+                # restore proj matrix
+                proj_matrix = norms * proj_matrix
             return RB(
                 basis=Basis(data=basis_data[:nn], integration=integration),
                 indices=greedy_indices,
@@ -506,12 +571,12 @@ def reduced_basis(
             integration,
         )
         proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
-        errs, diff_training = _sq_proj_errors(
-            proj_matrix[nn],
-            basis_data[nn],
-            integration.dot,
-            diff_training
-        )
+        if normalize:
+            errs = sq_errors(errs, proj_matrix[nn])
+        else:
+            errs, diff_training = sq_errors(
+                proj_matrix[nn], basis_data[nn], integration.dot, diff_training
+            )
         next_index = np.argmax(errs)
         greedy_errors[nn] = errs[next_index]
 
@@ -521,6 +586,9 @@ def reduced_basis(
 
     # Prune excess allocated entries
     greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn + 1)
+    if normalize:
+        # restore proj matrix
+        proj_matrix = norms * proj_matrix
 
     return RB(
         basis=Basis(data=basis_data[: nn + 1], integration=integration),
