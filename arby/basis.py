@@ -173,8 +173,8 @@ class Basis:
             nodes.append(new_node)
 
         v_matrix = np.array(self._next_vandermonde(self.data, nodes, v_matrix))
-        invV_matrix = np.linalg.inv(v_matrix.transpose())
-        interpolant = self.data.transpose() @ invV_matrix
+        invV_matrix = np.linalg.inv(v_matrix.T)
+        interpolant = self.data.T @ invV_matrix
 
         return EIM(interpolant=interpolant, nodes=nodes)
 
@@ -238,10 +238,10 @@ class Basis:
         h_interpolated : np.ndarray
             Interpolated function at EIM nodes.
         """
-        h = h.transpose()
+        h = h.T
         h_at_nodes = h[self.eim_.nodes]
         h_interpolated = self.eim_.interpolant @ h_at_nodes
-        return h_interpolated.transpose()
+        return h_interpolated.T
 
 
 # =============================================================================
@@ -497,7 +497,7 @@ def reduced_basis(
                 basis=Basis(data=basis_data[:nn], integration=integration),
                 indices=greedy_indices,
                 errors=greedy_errors,
-                projection_matrix=proj_matrix.transpose(),
+                projection_matrix=proj_matrix.T,
             )
 
         greedy_indices.append(next_index)
@@ -527,5 +527,5 @@ def reduced_basis(
         basis=Basis(data=basis_data[: nn + 1], integration=integration),
         indices=greedy_indices,
         errors=greedy_errors,
-        projection_matrix=proj_matrix.transpose(),
+        projection_matrix=proj_matrix.T,
     )
