@@ -449,10 +449,9 @@ def reduced_basis(
     # seed
     index_seed = 0
     seed_function = training_set[index_seed]
-    zero_function = np.zeros_like(seed_function)
 
     while index_seed < Ntrain:
-        if np.allclose(np.abs(seed_function), zero_function):
+        if np.allclose(np.abs(seed_function), 0):
             index_seed += 1
             seed_function = training_set[index_seed]
         else:
