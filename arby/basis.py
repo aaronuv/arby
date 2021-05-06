@@ -433,36 +433,44 @@ def reduced_basis(
     """
     integration = integrals.Integration(physical_points, rule=integration_rule)
 
-    # useful information
+    # useful constants
     Ntrain = training_set.shape[0]
     Nsamples = training_set.shape[1]
+    max_rank = min(Ntrain, Nsamples)
 
-    # Validate inputs
+    # validate inputs
     if Nsamples != np.size(integration.weights_):
         raise ValueError(
             "Number of samples is inconsistent with quadrature rule."
         )
 
-    # If seed gives a null function, choose a random seed
+    # ====== Seed the greedy algorithm and allocate memory ======
+
+    # seed
     index_seed = 0
     seed_function = training_set[index_seed]
     zero_function = np.zeros_like(seed_function)
-    while np.allclose(seed_function, zero_function):
-        index_seed = np.random.randint(1, Ntrain)
-        seed_function = training_set[index_seed]
 
-    # ====== Seed the greedy algorithm and allocate memory ======
+    while index_seed < Ntrain:
+        if np.allclose(np.abs(seed_function), zero_function):
+            index_seed += 1
+            seed_function = training_set[index_seed]
+        else:
+            break
+    else:
+        raise StopIteration("Null training set.")
 
-    # Allocate memory for greedy algorithm arrays
-    greedy_errors = np.empty(Ntrain, dtype="double")
-    proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_set.dtype)
+    # memory allocation
+    greedy_errors = np.empty(max_rank, dtype="double")
+    proj_matrix = np.empty((max_rank, Ntrain), dtype=training_set.dtype)
+    basis_data = np.empty((max_rank, Nsamples), dtype=training_set.dtype)
 
-    # Seed
+    # seed
     greedy_indices = [index_seed]
-    basis_data = np.empty_like(training_set)
     basis_data[0] = integration.normalize(training_set[index_seed])
-
     proj_matrix[0] = integration.dot(basis_data[0], training_set)
+
+    # ====== First greedy loop ======
 
     # the first diff matrix is the training set itself
     errs, diff_training = _sq_proj_errors(
@@ -498,8 +506,7 @@ def reduced_basis(
             basis_data[:nn],
             integration,
         )
-        proj_vector = integration.dot(basis_data[nn], training_set)
-        proj_matrix[nn] = proj_vector
+        proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
         errs, diff_training = _sq_proj_errors(
             proj_matrix[nn],
             basis_data[nn],
