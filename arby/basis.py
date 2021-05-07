@@ -178,7 +178,7 @@ class Basis:
 
         return EIM(interpolant=interpolant, nodes=nodes)
 
-    def projection_error(self, h):
+    def projection_error(self, h, s=(None,)):
         """Compute the squared projection error of a function h onto the basis.
 
         The error is computed in the L2 norm (continuous case) or the 2-norm
@@ -189,17 +189,20 @@ class Basis:
         ----------
         h : np.ndarray
             Function to be projected.
+        s : tuple, optional
+            Slice the basis. If the slice is not provided, the whole basis is
+            considered. Default = (None,)
 
         Returns
         -------
         error : float
             Square of the projection error.
         """
-        diff = h - self.project(h)
+        diff = h - self.project(h, s=s)
         error = self.integration.dot(diff, diff)
         return error
 
-    def project(self, h):
+    def project(self, h, s=(None,)):
         """Project a function h onto the basis.
 
         This method represents the action of projecting the function h onto the
@@ -209,14 +212,18 @@ class Basis:
         ----------
         h : np.ndarray
             Function or set of functions to be projected.
+        s : tuple, optional
+            Slice the basis. If the slice is not provided, the whole basis is
+            considered. Default = (None,)
 
         Returns
         -------
         projected_function : np.ndarray
             Projection of h onto the basis.
         """
+        s = slice(*s)
         projected_function = 0.0
-        for e in self.data:
+        for e in self.data[s]:
             projected_function += np.tensordot(
                 self.integration.dot(e, h), e, axes=0
             )
