@@ -528,7 +528,7 @@ def reduced_basis(
         # seed
         next_index = 0
         seed = training_set[next_index]
-	    
+
         while next_index < Ntrain - 1:
             if np.allclose(np.abs(seed), 0):
                 next_index += 1
@@ -537,7 +537,7 @@ def reduced_basis(
                 break
 
         greedy_indices = [next_index]
-        basis_data[0] = (training_set[next_index])
+        basis_data[0] = training_set[next_index]
         proj_matrix[0] = integration.dot(basis_data[0], training_set)
         sq_errors = _sq_errs_rel
         errs = sq_errors(np.ones(Ntrain), proj_matrix[0])
@@ -545,7 +545,7 @@ def reduced_basis(
     else:
         next_index = np.argmax(norms)
         greedy_indices = [next_index]
-        basis_data[0] = training_set[next_index]/norms[next_index]
+        basis_data[0] = training_set[next_index] / norms[next_index]
         proj_matrix[0] = integration.dot(basis_data[0], training_set)
         sq_errors = _sq_errs_abs
         errs, diff_training = sq_errors(
