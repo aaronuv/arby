@@ -504,44 +504,48 @@ def reduced_basis(
             "Number of samples is inconsistent with quadrature rule."
         )
 
+    if np.allclose(np.abs(training_set), 0, atol=1e-15):
+        raise ValueError("Null training set!")
+
     # ====== Seed the greedy algorithm and allocate memory ======
-
-    # seed
-    index_seed = 0
-    seed_function = training_set[index_seed]
-
-    while index_seed < Ntrain - 1:
-        if np.allclose(np.abs(seed_function), 0):
-            index_seed += 1
-            seed_function = training_set[index_seed]
-        else:
-            break
-    else:
-        raise StopIteration("Null training set.")
 
     # memory allocation
     greedy_errors = np.empty(max_rank, dtype="double")
     proj_matrix = np.empty((max_rank, Ntrain), dtype=training_set.dtype)
     basis_data = np.empty((max_rank, Nsamples), dtype=training_set.dtype)
 
-    # seed
-    greedy_indices = [index_seed]
-    basis_data[0] = integration.normalize(training_set[index_seed])
+    norms = integration.norm(training_set)
 
-    # ====== First greedy loop ======
     if normalize:
-        norms = integration.norm(training_set)
+        # normalize training set
         training_set = np.array(
             [
                 h if np.allclose(h, 0, atol=1e-15) else h / norms[i]
                 for i, h in enumerate(training_set)
             ]
         )
+
+        # seed
+        next_index = 0
+        seed = training_set[next_index]
+	    
+        while next_index < Ntrain - 1:
+            if np.allclose(np.abs(seed), 0):
+                next_index += 1
+                seed = training_set[next_index]
+            else:
+                break
+
+        greedy_indices = [next_index]
+        basis_data[0] = (training_set[next_index])
         proj_matrix[0] = integration.dot(basis_data[0], training_set)
         sq_errors = _sq_errs_rel
         errs = sq_errors(np.ones(Ntrain), proj_matrix[0])
 
     else:
+        next_index = np.argmax(norms)
+        greedy_indices = [next_index]
+        basis_data[0] = training_set[next_index]/norms[next_index]
         proj_matrix[0] = integration.dot(basis_data[0], training_set)
         sq_errors = _sq_errs_abs
         errs, diff_training = sq_errors(

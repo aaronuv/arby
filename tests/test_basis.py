@@ -290,7 +290,7 @@ def test_null_training(rom_parameters):
         training_set=np.zeros_like(rom_parameters["training_set"])
     )
 
-    with pytest.raises(StopIteration):
+    with pytest.raises(ValueError):
         arby.reduced_basis(
             training_set=rom_parameters["training_set"],
             physical_points=rom_parameters["physical_points"],
