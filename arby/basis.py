@@ -501,7 +501,7 @@ def reduced_basis(
     # ====== Seed the greedy algorithm and allocate memory ======
 
     # memory allocation
-    greedy_errors = np.empty(max_rank, dtype="double")
+    greedy_errors = np.empty(max_rank, dtype=np.float64)
     proj_matrix = np.empty((max_rank, Ntrain), dtype=training_set.dtype)
     basis_data = np.empty((max_rank, Nsamples), dtype=training_set.dtype)
 
