@@ -261,24 +261,15 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     norm = integration.norm(h)
     e = h / norm
 
-    n_iters = 0
-    continue_loop = True
-    while continue_loop:
+    for _ in range(max_iter):
         for b in basis:
             e -= b * integration.dot(b, e)
         new_norm = integration.norm(e)
-
-        a = 0.5
-        if new_norm / norm <= a:
-            norm = new_norm
-            n_iters += 1
-            if n_iters > max_iter:
-                raise StopIteration(
-                    "Gram-Schmidt algorithm: max number of "
-                    f"iterations reached ({max_iter})."
-                )
-        else:
-            continue_loop = False
+        if new_norm / norm > 0.5:
+            break
+        norm = new_norm
+    else:
+        raise StopIteration("Max number of iterations reached ({max_iter}).")
 
     return e / new_norm, new_norm
 
