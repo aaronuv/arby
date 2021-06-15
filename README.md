@@ -11,7 +11,7 @@
 
 Arby is a fully data-driven Python module to construct surrogate models, reduced bases and empirical interpolants from training data.
 
-This package implements a type of [Reduced Order Modeling](https://en.wikipedia.org/wiki/Model_order_reduction) technique for reducing the computational complexity of mathematical models in numerical simulations.
+This package implements a type of [Reduced Order Modeling](https://en.wikipedia.org/wiki/Model_order_reduction) technique for reducing the computational complexity of mathematical models in numerical simulations. This is done by building a surrogate model for the underlying model using only a training set of samples.
 
 # Install
 From PyPI repo,
@@ -56,7 +56,7 @@ f_model = ROM(training_set=training_set,
               physical_points=x_samples,
               parameter_points=params)
 ```
-With `f_model` we can get function samples for any parameter `par` in the
+With `f_model` we get function samples for any parameter `par` in the
 interval [`par_min`, `par_max`] simply by calling it:
 ```python
 f_model_at_par = f_model.surrogate(par)
