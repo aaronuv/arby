@@ -14,15 +14,15 @@ Arby is a fully data-driven Python module to construct surrogate models, reduced
 This package implements a type of [Reduced Order Modeling](https://en.wikipedia.org/wiki/Model_order_reduction) technique for reducing the computational complexity of mathematical models in numerical simulations. This is done by building a surrogate model for the underlying model using only a training set of samples.
 
 # Install
-From PyPI repo,
+From PyPI repo
 ```bash
 pip install arby
 ```
-or, for the latest version, clone this repo locally and from it do 
+For the latest version, clone this repo locally and from inside do
 ```bash
 pip install -e .
 ```
-or do instead
+or instead
 ```bash
 pip install -e git+https://github.com/aaronuv/arby
 ```
