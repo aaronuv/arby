@@ -11,6 +11,8 @@ import logging
 
 import attr
 
+import numba
+
 import numpy as np
 
 from . import integrals
@@ -307,6 +309,7 @@ def _sq_errs_abs(proj_vector, basis_element, dot_product, diff_training):
     return np.real(dot_product(diff_training, diff_training)), diff_training
 
 
+@numba.njit
 def _sq_errs_rel(errs, proj_vector):
     """Square of projection errors from precomputed projection coefficients.
 
@@ -330,6 +333,7 @@ def _sq_errs_rel(errs, proj_vector):
     return np.subtract(errs, np.abs(proj_vector) ** 2)
 
 
+@numba.njit
 def _prune(greedy_errors, proj_matrix, num):
     """Prune arrays to have size num."""
     return greedy_errors[:num], proj_matrix[:num]
@@ -487,7 +491,7 @@ def reduced_basis(
     # useful constants
     Ntrain = training_set.shape[0]
     Nsamples = training_set.shape[1]
-    max_rank = min(Ntrain, Nsamples)
+    max_rank = np.min([Ntrain, Nsamples])
 
     # validate inputs
     if Nsamples != np.size(integration.weights_):

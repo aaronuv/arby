@@ -31,7 +31,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 arby_init_path = os.path.join(BASE_DIR, "arby", "__init__.py")
 
-REQUIREMENTS = ["attrs", "numpy", "scipy"]
+REQUIREMENTS = ["attrs", "numba", "numpy", "scipy"]
 
 
 with open("README.md", "r") as f:

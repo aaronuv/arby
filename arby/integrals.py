@@ -16,13 +16,17 @@
 
 import attr
 
+import numba
+
 import numpy as np
+
 
 # =============================================================================
 # Helper functions
 # =============================================================================
 
 
+@numba.njit(parallel=True)
 def _riemann_quadrature(interval):
     """Uniform Riemann quadrature.
 
@@ -48,6 +52,7 @@ def _riemann_quadrature(interval):
     return nodes, (b - a) / (n - 1) * weights
 
 
+@numba.njit(parallel=True)
 def _trapezoidal_quadrature(interval):
     """Uniform trapezoidal quadrature."""
     n = interval.shape[0]
@@ -60,6 +65,7 @@ def _trapezoidal_quadrature(interval):
     return nodes, (b - a) / (n - 1) * weights
 
 
+@numba.njit(parallel=True)
 def _euclidean_quadrature(interval):
     """Uniform euclidean quadrature.
 
