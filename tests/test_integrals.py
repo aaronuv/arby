@@ -11,6 +11,8 @@
 
 import arby
 
+import numba
+
 import numpy as np
 
 import pytest
@@ -20,10 +22,18 @@ import pytest
 # =============================================================================
 
 
-@pytest.mark.parametrize("rule", ["fake_rule", 1 / 137.0])
-def test_bad_integration_inputs(rule):
+def test_bad_integration_rule_type():
     """Test rule input."""
     interval = np.linspace(0, 1, 101)
+    rule = 1 / 137.0
+    with pytest.raises(numba.TypingError):
+        arby.integrals.Integration(interval=interval, rule=rule)
+
+
+def test_bad_integration_rule():
+    """Test rule input."""
+    interval = np.linspace(0, 1, 101)
+    rule = "fake_rule"
     with pytest.raises(ValueError):
         arby.integrals.Integration(interval=interval, rule=rule)
 

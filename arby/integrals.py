@@ -14,8 +14,6 @@
 # IMPORTS
 # =============================================================================
 
-import attr
-
 import numba
 
 import numpy as np
@@ -103,7 +101,15 @@ QUADRATURES = {
 # =============================================================================
 
 
-@attr.s(frozen=True)
+INTEGRATION_CLASS_SPEC = {
+    "interval": numba.types.float64[:],
+    "rule": numba.types.string,
+    "nodes_": numba.types.float64[:],
+    "weights_": numba.types.float64[:],
+}
+
+
+@numba.experimental.jitclass(INTEGRATION_CLASS_SPEC)
 class Integration:
     """Integration scheme.
 
@@ -125,20 +131,24 @@ class Integration:
 
     """
 
-    interval = attr.ib()
-    rule = attr.ib(
-        validator=attr.validators.in_(QUADRATURES), default="riemann"
-    )
+    def __init__(self, interval, rule="riemann"):
 
-    nodes_ = attr.ib(init=False, repr=False)
-    weights_ = attr.ib(init=False, repr=False)
+        self.interval = interval
+        self.rule = rule
 
-    def __attrs_post_init__(self):  # noqa to skip pydocstyle in the method
-        quadrature = QUADRATURES[self.rule]
-        nodes, weights = quadrature(self.interval)
+        quadrature_result = self._quadrature(interval)
+        if quadrature_result is None:
+            raise ValueError("Unknow rule provided")
+        self.nodes_, self.weights_ = quadrature_result
 
-        super().__setattr__("nodes_", nodes)
-        super().__setattr__("weights_", weights)
+    def _quadrature(self, interval):
+        if self.rule == "riemann":
+            return _riemann_quadrature(interval)
+        elif self.rule == "trapezoidal":
+            return _trapezoidal_quadrature(interval)
+        elif self.rule == "euclidean":
+            return _euclidean_quadrature(interval)
+        return None
 
     def integral(self, f):
         """Integrate a function.
