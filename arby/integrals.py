@@ -101,12 +101,12 @@ QUADRATURES = {
 # =============================================================================
 
 
-INTEGRATION_CLASS_SPEC = {
-    "interval": numba.types.float64[:],
-    "rule": numba.types.string,
-    "nodes_": numba.types.float64[:],
-    "weights_": numba.types.float64[:],
-}
+INTEGRATION_CLASS_SPEC = [
+    ("interval", numba.types.float64[:]),
+    ("rule", numba.types.string),
+    ("nodes_", numba.types.float64[:]),
+    ("weights_", numba.types.float64[:]),
+]
 
 
 @numba.experimental.jitclass(INTEGRATION_CLASS_SPEC)
@@ -170,7 +170,9 @@ class Integration:
             Real or complex numbers array.
 
         """
-        return np.dot(self.weights_, (f.conjugate() * g).transpose())
+        fgT = (f.conjugate() * g).transpose()
+        weights = np.asarray(self.weights_, dtype=fgT.dtype)
+        return np.dot(weights, fgT)
 
     def norm(self, f):
         """Return the norm of a function.
@@ -193,4 +195,5 @@ class Integration:
             Real or complex numbers array.
 
         """
-        return np.divide(f, self.norm(f).reshape(-1, 1))
+        normf = np.asarray(self.norm(f))
+        return np.divide(f, normf.reshape(-1, 1))
