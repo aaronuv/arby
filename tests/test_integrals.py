@@ -26,7 +26,7 @@ def test_bad_integration_rule_type():
     """Test rule input."""
     interval = np.linspace(0, 1, 101)
     rule = 1 / 137.0
-    with pytest.raises(numba.TypingError):
+    with pytest.raises((ValueError, numba.TypingError)):
         arby.integrals.Integration(interval=interval, rule=rule)
 
 
@@ -57,7 +57,7 @@ def test_trapezoidal():
 
 def test_euclidean():
     """Test discrete rule with imaginary part."""
-    discrete_points = np.arange(1., 10.)
+    discrete_points = np.arange(1.0, 10.0)
     random = np.random.default_rng(seed=1)
     dummy_array_1 = np.array(
         [random.random() + 1j * random.random() for _ in range(9)]
@@ -79,7 +79,7 @@ def test_euclidean():
 
 def test_euclidean_reals():
     """Test discrete rule with no imaginary part."""
-    discrete_points = np.arange(1., 10.)
+    discrete_points = np.arange(1.0, 10.0)
     random = np.random.default_rng(seed=1)
     dummy_array_1 = np.array([random.random() for _ in range(9)])
     dummy_array_2 = np.array([random.random() for _ in range(9)])
