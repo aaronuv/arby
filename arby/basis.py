@@ -258,6 +258,7 @@ class Basis:
 # =============================================================================
 
 
+@numba.njit
 def _gs_one_element(h, basis, integration, max_iter=3):
     """Orthonormalize a function against an orthonormal basis."""
     norm = integration.norm(h)
@@ -349,6 +350,7 @@ def _prune(greedy_errors, proj_matrix, num):
 # ===================================
 
 
+@numba.njit
 def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     """Orthonormalize a set of functions.
 
@@ -394,17 +396,18 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     basis_data = np.zeros(functions.shape, dtype=functions.dtype)
 
     # First element of the basis is special, it's just normalized
-    basis_data[0] = integration.normalize(functions[0])
 
     # For the rest of basis elements add them one by one by extending basis
-    def gs_one_element(row):
-        return _gs_one_element(
-            row, basis=basis_data, integration=integration, max_iter=max_iter
-        )[0]
-
-    basis_data[1:] = np.apply_along_axis(
-        gs_one_element, axis=1, arr=functions[1:]
-    )
+    for idx, row in enumerate(functions):
+        if idx == 0:
+            basis_data[idx] = integration.normalize(functions[0])
+        else:
+            basis_data[idx] = _gs_one_element(
+                row,
+                basis=basis_data,
+                integration=integration,
+                max_iter=max_iter,
+            )[0]
 
     return basis_data
 
