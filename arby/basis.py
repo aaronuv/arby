@@ -226,9 +226,9 @@ class Basis:
         s = slice(*s)
         projected_function = 0.0
         for e in self.data[s]:
-            projected_function += np.tensordot(
-                self.integration.dot(e, h), e, axes=0
-            )
+            dot = self.integration.dot(e, h)
+            tensordot = _tensordotfunc(np.asarray(dot).ndim)
+            projected_function += tensordot(dot, e)
         return projected_function
 
     def interpolate(self, h):
@@ -277,6 +277,34 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     return e / new_norm, new_norm
 
 
+@numba.njit
+def _tensordot0d(a, b):
+    """Tensordot for a=scalar and array."""
+    return a * b
+
+
+@numba.njit
+def _tensordot1d(a, b):
+    """Tensordot for a=1darray and array."""
+    return a.reshape(-1, 1) * b
+
+
+@numba.njit
+def _tensordotNd(a, b):
+    """Tensordot for generic arrays."""
+    return np.tensordot(a, b, axes=0)
+
+
+@numba.njit
+def _tensordotfunc(ndim):
+    if ndim == 0:
+        return _tensordot0d
+    elif ndim == 1:
+        return _tensordot1d
+    else:
+        return _tensordotNd
+
+
 def _sq_errs_abs(proj_vector, basis_element, dot_product, diff_training):
     """Square of projection errors from precomputed projection coefficients.
 
@@ -304,8 +332,9 @@ def _sq_errs_abs(proj_vector, basis_element, dot_product, diff_training):
     diff_training : numpy.ndarray
         Actualized difference training set and projected set.
     """
+    tensordot = _tensordotfunc(np.asarray(proj_vector).ndim)
     diff_training = np.subtract(
-        diff_training, np.tensordot(proj_vector, basis_element, axes=0)
+        diff_training, tensordot(proj_vector, basis_element)
     )
     return np.real(dot_product(diff_training, diff_training)), diff_training
 

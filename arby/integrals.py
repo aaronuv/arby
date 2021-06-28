@@ -159,7 +159,9 @@ class Integration:
             Real or complex numbers array.
 
         """
-        return np.dot(self.weights_, f)
+        f_ = np.ascontiguousarray(f)
+        w_ = np.ascontiguousarray(self.weights_)
+        return np.dot(w_, f_)
 
     def dot(self, f, g):
         """Return the dot product between functions.
@@ -172,7 +174,9 @@ class Integration:
         """
         fgT = (f.conjugate() * g).transpose()
         weights = np.asarray(self.weights_, dtype=fgT.dtype)
-        return np.dot(weights, fgT)
+        f_ = np.ascontiguousarray(fgT)
+        w_ = np.ascontiguousarray(weights)
+        return np.dot(w_, f_)
 
     def norm(self, f):
         """Return the norm of a function.
@@ -184,7 +188,9 @@ class Integration:
 
         """
         f_euclid = (f.conjugate() * f).transpose().real
-        return np.sqrt(np.dot(self.weights_, f_euclid))
+        f_ = np.ascontiguousarray(f_euclid)
+        w_ = np.ascontiguousarray(self.weights_)
+        return np.sqrt(np.dot(w_, f_))
 
     def normalize(self, f):
         """Normalize a function.
