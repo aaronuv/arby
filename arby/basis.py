@@ -301,8 +301,7 @@ def _tensordotfunc(ndim):
         return _tensordot0d
     elif ndim == 1:
         return _tensordot1d
-    else:
-        return _tensordotNd
+    return _tensordotNd
 
 
 def _sq_errs_abs(proj_vector, basis_element, dot_product, diff_training):
