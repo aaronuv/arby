@@ -292,10 +292,11 @@ def _tensordot1d(a, b):
 @numba.njit
 def _tensordotNd(a, b):
     """Tensordot for generic arrays."""
-    return np.tensordot(a, b, axes=0)
+    raise ValueError("Not implemented")
+    # return np.tensordot(a, b, axes=0)
 
 
-@numba.njit
+@numba.jit
 def _tensordotfunc(ndim):
     if ndim == 0:
         return _tensordot0d
@@ -406,13 +407,14 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     return basis_data
 
 
-def reduced_basis(
+# @numba.njit
+def _reduced_basis(
     training_set,
     physical_points,
     integration_rule="riemann",
     greedy_tol=1e-12,
     normalize=False,
-) -> RB:
+):
     """Build a reduced basis from training data.
 
     This function implements the Reduced Basis (RB) greedy algorithm for
@@ -483,20 +485,20 @@ def reduced_basis(
        (2021)
 
     """
-    integration = integrals.Integration(physical_points, rule=integration_rule)
+    integration = integrals.Integration(physical_points, integration_rule)
 
     # useful constants
     Ntrain = training_set.shape[0]
     Nsamples = training_set.shape[1]
-    max_rank = np.min([Ntrain, Nsamples])
+    max_rank = min([Ntrain, Nsamples])
 
     # validate inputs
-    if Nsamples != np.size(integration.weights_):
+    if Nsamples != integration.weights_.size:
         raise ValueError(
             "Number of samples is inconsistent with quadrature rule."
         )
 
-    if np.allclose(np.abs(training_set), 0, atol=1e-15):
+    if np.all(np.abs(training_set) < 1e-15):
         raise ValueError("Null training set!")
 
     # ====== Seed the greedy algorithm and allocate memory ======
@@ -510,19 +512,21 @@ def reduced_basis(
 
     if normalize:
         # normalize training set
-        training_set = np.array(
-            [
-                h if np.allclose(h, 0, atol=1e-15) else h / norms[i]
-                for i, h in enumerate(training_set)
-            ]
-        )
+        norm_tset = np.empty(training_set.shape, dtype=training_set.dtype)
+        for i, h in enumerate(training_set):
+            if np.all(np.abs(h) < 1e-15):
+                norm_tset[i, :] = h
+            else:
+                norm_tset[i, :] = h / norms[i]
+        training_set = norm_tset
 
         # seed
         next_index = 0
         seed = training_set[next_index]
 
         while next_index < Ntrain - 1:
-            if np.allclose(np.abs(seed), 0):
+            # keep previous implicit default value of 1e-8
+            if np.all(np.abs(seed) < 1e-8):
                 next_index += 1
                 seed = training_set[next_index]
             else:
@@ -569,12 +573,9 @@ def reduced_basis(
             if normalize:
                 # restore proj matrix
                 proj_matrix = norms * proj_matrix
-            return RB(
-                basis=Basis(data=basis_data[:nn], integration=integration),
-                indices=greedy_indices,
-                errors=greedy_errors,
-                projection_matrix=proj_matrix.T,
-            )
+            _basis = (basis_data[:nn], integration)
+            _rb = (_basis, greedy_indices, greedy_errors, proj_matrix.T)
+            return _rb
 
         greedy_indices.append(next_index)
         basis_data[nn], _ = _gs_one_element(
@@ -611,9 +612,25 @@ def reduced_basis(
         # restore proj matrix
         proj_matrix = norms * proj_matrix
 
+    _basis = (basis_data[: nn + 1], integration)
+    _rb = (_basis, greedy_indices, greedy_errors, proj_matrix.T)
+    return _rb
+
+
+def reduced_basis(
+    training_set,
+    physical_points,
+    integration_rule="riemann",
+    greedy_tol=1e-12,
+    normalize=False,
+) -> RB:
+    rb = _reduced_basis(
+        training_set, physical_points, integration_rule, greedy_tol, normalize
+    )
+    basis = rb[0]
     return RB(
-        basis=Basis(data=basis_data[: nn + 1], integration=integration),
-        indices=greedy_indices,
-        errors=greedy_errors,
-        projection_matrix=proj_matrix.T,
+        basis=Basis(data=basis[0], integration=basis[1]),
+        indices=rb[1],
+        errors=rb[2],
+        projection_matrix=rb[3],
     )

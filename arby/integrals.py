@@ -47,7 +47,7 @@ def _riemann_quadrature(interval):
     weights = np.ones(n, dtype="double")
     weights[-1] = 0.0
     nodes = interval
-    return nodes, (b - a) / (n - 1) * weights
+    return [nodes, (b - a) / (n - 1) * weights]
 
 
 @numba.njit(parallel=True)
@@ -60,7 +60,7 @@ def _trapezoidal_quadrature(interval):
     weights[0] = 0.5
     weights[-1] = 0.5
     nodes = interval
-    return nodes, (b - a) / (n - 1) * weights
+    return [nodes, (b - a) / (n - 1) * weights]
 
 
 @numba.njit(parallel=True)
@@ -86,7 +86,7 @@ def _euclidean_quadrature(interval):
     n = interval.shape[0]
     weights = np.ones(n, dtype="double")
     nodes = interval
-    return nodes, weights
+    return [nodes, weights]
 
 
 QUADRATURES = {
