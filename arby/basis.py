@@ -304,40 +304,6 @@ def _tensordotfunc(ndim):
     return _tensordotNd
 
 
-def _sq_errs_abs(proj_vector, basis_element, dot_product, diff_training):
-    """Square of projection errors from precomputed projection coefficients.
-
-    Since the training set is not a-priori normalized, this function computes
-    errors computing the squared norm of the difference between training set
-    and the approximation. This method trades accuracy by memory.
-
-    Parameters
-    ----------
-    proj_vector : numpy.ndarray
-        Stores projection coefficients of training functions onto the actual
-        basis.
-    basis_element : numpy.ndarray
-        Actual basis element.
-    dot_product : arby.Integration.dot
-        Inherited dot product.
-    diff_training : numpy.ndarray
-        Difference between training set and projected set aiming to be
-        actualized.
-
-    Returns
-    -------
-    proj_errors : numpy.ndarray
-        Squared projection errors.
-    diff_training : numpy.ndarray
-        Actualized difference training set and projected set.
-    """
-    tensordot = _tensordotfunc(np.asarray(proj_vector).ndim)
-    diff_training = np.subtract(
-        diff_training, tensordot(proj_vector, basis_element)
-    )
-    return np.real(dot_product(diff_training, diff_training)), diff_training
-
-
 @numba.njit
 def _sq_errs_rel(errs, proj_vector):
     """Square of projection errors from precomputed projection coefficients.
@@ -573,17 +539,26 @@ def reduced_basis(
         greedy_indices = [next_index]
         basis_data[0] = training_set[next_index] / norms[next_index]
         proj_matrix[0] = integration.dot(basis_data[0], training_set)
-        sq_errors = _sq_errs_abs
-        errs, diff_training = sq_errors(
-            proj_matrix[0], basis_data[0], integration.dot, training_set
+
+        # compute errors
+        tensordot = _tensordotfunc(np.asarray(proj_matrix[0]).ndim)
+        diff_training = np.subtract(
+            training_set, tensordot(proj_matrix[0], basis_data[0])
         )
+        errs = np.real(integration.dot(diff_training, diff_training))
+        # --------------
+        # sq_errors = _sq_errs_abs
+        # errs, diff_training = sq_errors(
+        #     proj_matrix[0], basis_data[0], dot_product, training_set
+        # )
+        # --------------
 
     next_index = np.argmax(errs)
     greedy_errors[0] = errs[next_index]
     sigma = greedy_errors[0]
 
     # ====== Start greedy loop ======
-    logger.debug("\n Step", "\t", "Error")
+    # logger.debug("\n Step", "\t", "Error")
     nn = 0
     while sigma > greedy_tol:
         nn += 1
@@ -611,15 +586,24 @@ def reduced_basis(
         if normalize:
             errs = sq_errors(errs, proj_matrix[nn])
         else:
-            errs, diff_training = sq_errors(
-                proj_matrix[nn], basis_data[nn], integration.dot, diff_training
+            # compute errors
+            tensordot = _tensordotfunc(np.asarray(proj_matrix[nn]).ndim)
+            diff_training = np.subtract(
+                diff_training, tensordot(proj_matrix[nn], basis_data[nn])
             )
+            errs = np.real(integration.dot(diff_training, diff_training))
+            # -----------------
+            # errs, diff_training = sq_errors(
+            #     proj_matrix[nn], basis_data[nn],
+            #     integration.dot, diff_training,
+            # )
+            # -----------------
         next_index = np.argmax(errs)
         greedy_errors[nn] = errs[next_index]
 
         sigma = errs[next_index]
 
-        logger.debug(nn, "\t", sigma)
+        # logger.debug(nn, "\t", sigma)
 
     # Prune excess allocated entries
     greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn + 1)

@@ -162,6 +162,7 @@ class Integration:
         f_ = np.ascontiguousarray(f)
         w_ = np.ascontiguousarray(self.weights_)
         return np.dot(w_, f_)
+        # return _integral(f, self.weights_)
 
     def dot(self, f, g):
         """Return the dot product between functions.
@@ -177,6 +178,7 @@ class Integration:
         f_ = np.ascontiguousarray(fgT)
         w_ = np.ascontiguousarray(weights)
         return np.dot(w_, f_)
+        # return _dot(f, g, self.weights_)
 
     def norm(self, f):
         """Return the norm of a function.
