@@ -259,7 +259,7 @@ def test_2dim_model(normalize, rule):
         training_set=training,
         physical_points=x,
         integration_rule=rule,
-        greedy_tol=1e-15,
+        greedy_tol=1e-14,
         normalize=normalize,
     )
 
