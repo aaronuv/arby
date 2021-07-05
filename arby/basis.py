@@ -227,8 +227,7 @@ class Basis:
         projected_function = 0.0
         for e in self.data[s]:
             dot = self.integration.dot(e, h)
-            tensordot = _tensordotfunc(np.asarray(dot).ndim)
-            projected_function += tensordot(dot, e)
+            projected_function += np.tensordot(dot, e, axes=0)
         return projected_function
 
     def interpolate(self, h):
@@ -277,32 +276,13 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     return e / new_norm, new_norm
 
 
-@numba.njit
-def _tensordot0d(a, b):
-    """Tensordot for a=scalar and array."""
-    return a * b
-
-
-@numba.njit
+@numba.njit(parallel=True)
 def _tensordot1d(a, b):
-    """Tensordot for a=1darray and array."""
-    return a.reshape(-1, 1) * b
+    """Tensordot for where a is 1d array.
 
-
-@numba.njit
-def _tensordotNd(a, b):
-    """Tensordot for generic arrays."""
-    raise ValueError("Not implemented")
-    # return np.tensordot(a, b, axes=0)
-
-
-@numba.jit
-def _tensordotfunc(ndim):
-    if ndim == 0:
-        return _tensordot0d
-    elif ndim == 1:
-        return _tensordot1d
-    return _tensordotNd
+    Returns the same output as: np.tensordot(a, b, axes=0)
+    """
+    return a.reshape(len(a), 1) * b
 
 
 @numba.njit
@@ -326,7 +306,7 @@ def _sq_errs_rel(errs, proj_vector):
     proj_errors : numpy.ndarray
         Squared projection errors.
     """
-    return np.subtract(errs, np.abs(proj_vector) ** 2)
+    return np.subtract(errs, proj_vector ** 2)
 
 
 @numba.njit
@@ -391,7 +371,6 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     basis_data = np.zeros(functions.shape, dtype=functions.dtype)
 
     # First element of the basis is special, it's just normalized
-
     # For the rest of basis elements add them one by one by extending basis
     for idx, row in enumerate(functions):
         if idx == 0:
@@ -407,14 +386,142 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     return basis_data
 
 
-# @numba.njit
+@numba.njit
 def _reduced_basis(
+    training_set,
+    physical_points,
+    integration_rule,
+    greedy_tol,
+    normalize,
+):
+    """Build a reduced basis from training data.
+
+    Notes: This is just the numba decorated function. See arby.reduced_basis
+    for details.
+    """
+    integration = integrals.Integration(physical_points, integration_rule)
+
+    # useful constants
+    Ntrain = training_set.shape[0]
+    Nsamples = training_set.shape[1]
+    max_rank = min([Ntrain, Nsamples])
+
+    # validate inputs
+    if Nsamples != integration.weights_.size:
+        raise ValueError(
+            "Number of samples is inconsistent with quadrature rule."
+        )
+
+    if np.all(np.abs(training_set) < 1e-15):
+        raise ValueError("Null training set!")
+
+    # ====== Seed the greedy algorithm and allocate memory ======
+
+    # memory allocation
+    greedy_errors = np.empty(max_rank, dtype=np.float64)
+    proj_matrix = np.empty((max_rank, Ntrain), dtype=training_set.dtype)
+    basis_data = np.empty((max_rank, Nsamples), dtype=training_set.dtype)
+
+    norms = integration.norm(training_set)
+
+    if normalize:
+        # normalize training set
+        norm_tset = np.empty(training_set.shape, dtype=training_set.dtype)
+        for i, h in enumerate(training_set):
+            if np.all(np.abs(h) < 1e-15):
+                norm_tset[i, :] = h
+            else:
+                norm_tset[i, :] = h / norms[i]
+        training_set = norm_tset
+
+        # seed
+        next_index = 0
+        seed = training_set[next_index]
+
+        while next_index < Ntrain - 1:
+            # keep previous implicit default value of 1e-8
+            if np.all(np.abs(seed) < 1e-8):
+                next_index += 1
+                seed = training_set[next_index]
+            else:
+                break
+
+        greedy_indices = [next_index]
+        basis_data[0] = training_set[next_index]
+        proj_matrix[0] = integration.dot(basis_data[0], training_set)
+        sq_errors = _sq_errs_rel
+        errs = sq_errors(np.ones(Ntrain), proj_matrix[0])
+
+    else:
+        next_index = np.argmax(norms)
+        greedy_indices = [next_index]
+        basis_data[0] = training_set[next_index] / norms[next_index]
+        proj_matrix[0] = integration.dot(basis_data[0], training_set)
+        # compute errors
+        diff_training = np.subtract(
+            training_set, _tensordot1d(proj_matrix[0], basis_data[0])
+        )
+        errs = np.real(integration.dot(diff_training, diff_training))
+
+    next_index = np.argmax(errs)
+    greedy_errors[0] = errs[next_index]
+    sigma = greedy_errors[0]
+
+    # ====== Start greedy loop ======
+    nn = 0
+    while sigma > greedy_tol:
+        nn += 1
+
+        if next_index in greedy_indices:
+            # Prune excess allocated entries
+            greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
+            if normalize:
+                # restore proj matrix
+                proj_matrix = norms * proj_matrix
+            _basis = (basis_data[:nn], integration)
+            _rb = (_basis, greedy_indices, greedy_errors, proj_matrix.T)
+            return _rb
+
+        greedy_indices.append(next_index)
+        basis_data[nn], _ = _gs_one_element(
+            training_set[greedy_indices[nn]],
+            basis_data[:nn],
+            integration,
+        )
+        proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
+
+        if normalize:
+            errs = sq_errors(errs, proj_matrix[nn])
+        else:
+            # compute errors
+            diff_training = np.subtract(
+                diff_training, _tensordot1d(proj_matrix[nn], basis_data[nn])
+            )
+            errs = np.real(integration.dot(diff_training, diff_training))
+
+        next_index = np.argmax(errs)
+        greedy_errors[nn] = errs[next_index]
+
+        sigma = errs[next_index]
+
+    # Prune excess allocated entries
+    greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn + 1)
+    if normalize:
+        # restore proj matrix
+        proj_matrix = norms * proj_matrix
+
+    _basis = (basis_data[: nn + 1], integration)
+    _rb = (_basis, greedy_indices, greedy_errors, proj_matrix.T)
+    return _rb
+
+
+def reduced_basis(
     training_set,
     physical_points,
     integration_rule="riemann",
     greedy_tol=1e-12,
     normalize=False,
-):
+) -> RB:
     """Build a reduced basis from training data.
 
     This function implements the Reduced Basis (RB) greedy algorithm for
@@ -485,145 +592,7 @@ def _reduced_basis(
        (2021)
 
     """
-    integration = integrals.Integration(physical_points, integration_rule)
-
-    # useful constants
-    Ntrain = training_set.shape[0]
-    Nsamples = training_set.shape[1]
-    max_rank = min([Ntrain, Nsamples])
-
-    # validate inputs
-    if Nsamples != integration.weights_.size:
-        raise ValueError(
-            "Number of samples is inconsistent with quadrature rule."
-        )
-
-    if np.all(np.abs(training_set) < 1e-15):
-        raise ValueError("Null training set!")
-
-    # ====== Seed the greedy algorithm and allocate memory ======
-
-    # memory allocation
-    greedy_errors = np.empty(max_rank, dtype=np.float64)
-    proj_matrix = np.empty((max_rank, Ntrain), dtype=training_set.dtype)
-    basis_data = np.empty((max_rank, Nsamples), dtype=training_set.dtype)
-
-    norms = integration.norm(training_set)
-
-    if normalize:
-        # normalize training set
-        norm_tset = np.empty(training_set.shape, dtype=training_set.dtype)
-        for i, h in enumerate(training_set):
-            if np.all(np.abs(h) < 1e-15):
-                norm_tset[i, :] = h
-            else:
-                norm_tset[i, :] = h / norms[i]
-        training_set = norm_tset
-
-        # seed
-        next_index = 0
-        seed = training_set[next_index]
-
-        while next_index < Ntrain - 1:
-            # keep previous implicit default value of 1e-8
-            if np.all(np.abs(seed) < 1e-8):
-                next_index += 1
-                seed = training_set[next_index]
-            else:
-                break
-
-        greedy_indices = [next_index]
-        basis_data[0] = training_set[next_index]
-        proj_matrix[0] = integration.dot(basis_data[0], training_set)
-        sq_errors = _sq_errs_rel
-        errs = sq_errors(np.ones(Ntrain), proj_matrix[0])
-
-    else:
-        next_index = np.argmax(norms)
-        greedy_indices = [next_index]
-        basis_data[0] = training_set[next_index] / norms[next_index]
-        proj_matrix[0] = integration.dot(basis_data[0], training_set)
-
-        # compute errors
-        tensordot = _tensordotfunc(np.asarray(proj_matrix[0]).ndim)
-        diff_training = np.subtract(
-            training_set, tensordot(proj_matrix[0], basis_data[0])
-        )
-        errs = np.real(integration.dot(diff_training, diff_training))
-        # --------------
-        # sq_errors = _sq_errs_abs
-        # errs, diff_training = sq_errors(
-        #     proj_matrix[0], basis_data[0], dot_product, training_set
-        # )
-        # --------------
-
-    next_index = np.argmax(errs)
-    greedy_errors[0] = errs[next_index]
-    sigma = greedy_errors[0]
-
-    # ====== Start greedy loop ======
-    # logger.debug("\n Step", "\t", "Error")
-    nn = 0
-    while sigma > greedy_tol:
-        nn += 1
-
-        if next_index in greedy_indices:
-            # Prune excess allocated entries
-            greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
-            if normalize:
-                # restore proj matrix
-                proj_matrix = norms * proj_matrix
-            _basis = (basis_data[:nn], integration)
-            _rb = (_basis, greedy_indices, greedy_errors, proj_matrix.T)
-            return _rb
-
-        greedy_indices.append(next_index)
-        basis_data[nn], _ = _gs_one_element(
-            training_set[greedy_indices[nn]],
-            basis_data[:nn],
-            integration,
-        )
-        proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
-        if normalize:
-            errs = sq_errors(errs, proj_matrix[nn])
-        else:
-            # compute errors
-            tensordot = _tensordotfunc(np.asarray(proj_matrix[nn]).ndim)
-            diff_training = np.subtract(
-                diff_training, tensordot(proj_matrix[nn], basis_data[nn])
-            )
-            errs = np.real(integration.dot(diff_training, diff_training))
-            # -----------------
-            # errs, diff_training = sq_errors(
-            #     proj_matrix[nn], basis_data[nn],
-            #     integration.dot, diff_training,
-            # )
-            # -----------------
-        next_index = np.argmax(errs)
-        greedy_errors[nn] = errs[next_index]
-
-        sigma = errs[next_index]
-
-        # logger.debug(nn, "\t", sigma)
-
-    # Prune excess allocated entries
-    greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn + 1)
-    if normalize:
-        # restore proj matrix
-        proj_matrix = norms * proj_matrix
-
-    _basis = (basis_data[: nn + 1], integration)
-    _rb = (_basis, greedy_indices, greedy_errors, proj_matrix.T)
-    return _rb
-
-
-def reduced_basis(
-    training_set,
-    physical_points,
-    integration_rule="riemann",
-    greedy_tol=1e-12,
-    normalize=False,
-) -> RB:
+    # Wrapper function that calls the numba decorated function _reduced_basis
     rb = _reduced_basis(
         training_set, physical_points, integration_rule, greedy_tol, normalize
     )
