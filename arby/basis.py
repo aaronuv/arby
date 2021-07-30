@@ -8,7 +8,6 @@
 
 import functools
 import logging
-from collections import namedtuple
 
 import attr
 
@@ -24,22 +23,49 @@ from . import integrals
 
 logger = logging.getLogger("arby.basis")
 
-
 # =================================
 # Class for Basis Analysis
 # =================================
 
-#: Container for EIM information
-EIM = namedtuple("EIM", ["interpolant", "nodes"])
-EIM.interpolant.__doc__ = "Interpolant matrix."
-EIM.nodes.__doc__ = "EIM nodes."
 
-#: Container for RB information
-RB = namedtuple("RB", ["basis", "indices", "errors", "projection_matrix"])
-RB.basis.__doc__ = "Reduced basis object."
-RB.indices.__doc__ = "Greedy indices."
-RB.errors.__doc__ = "Greedy errors."
-RB.projection_matrix.__doc__ = "Projection coefficients."
+@attr.s(frozen=True, hash=False, slots=True)
+class EIM:
+    """Container for EIM information.
+
+    Parameters
+    ----------
+    interpolant: numpy.ndarray
+        Interpolant matrix.
+
+    nodes: list
+        EIM nodes.
+    """
+
+    interpolant: np.ndarray = attr.ib()
+    nodes: list = attr.ib()
+
+
+@attr.s(frozen=True, hash=False, slots=True)
+class RB:
+    """Container for RB information.
+
+    Parameters
+    ----------
+    basis: np.ndarray
+        Reduced basis object.
+    indices: np.ndarray
+        Greedy indices.
+    errors: np.ndarray
+        Greedy errors.
+    projection_matrix: np.ndarray
+        Projection coefficients.
+
+    """
+
+    basis: np.ndarray = attr.ib()
+    indices: np.ndarray = attr.ib()
+    errors: np.ndarray = attr.ib()
+    projection_matrix: np.ndarray = attr.ib()
 
 
 @attr.s(frozen=True, hash=False)
@@ -147,12 +173,12 @@ class Basis:
             nodes.append(new_node)
 
         v_matrix = np.array(self._next_vandermonde(self.data, nodes, v_matrix))
-        invV_matrix = np.linalg.inv(v_matrix.transpose())
-        interpolant = self.data.transpose() @ invV_matrix
+        invV_matrix = np.linalg.inv(v_matrix.T)
+        interpolant = self.data.T @ invV_matrix
 
         return EIM(interpolant=interpolant, nodes=nodes)
 
-    def projection_error(self, h):
+    def projection_error(self, h, s=(None,)):
         """Compute the squared projection error of a function h onto the basis.
 
         The error is computed in the L2 norm (continuous case) or the 2-norm
@@ -163,17 +189,20 @@ class Basis:
         ----------
         h : np.ndarray
             Function to be projected.
+        s : tuple, optional
+            Slice the basis. If the slice is not provided, the whole basis is
+            considered. Default = (None,)
 
         Returns
         -------
         error : float
             Square of the projection error.
         """
-        diff = h - self.project(h)
+        diff = h - self.project(h, s=s)
         error = self.integration.dot(diff, diff)
         return error
 
-    def project(self, h):
+    def project(self, h, s=(None,)):
         """Project a function h onto the basis.
 
         This method represents the action of projecting the function h onto the
@@ -183,14 +212,18 @@ class Basis:
         ----------
         h : np.ndarray
             Function or set of functions to be projected.
+        s : tuple, optional
+            Slice the basis. If the slice is not provided, the whole basis is
+            considered. Default = (None,)
 
         Returns
         -------
         projected_function : np.ndarray
             Projection of h onto the basis.
         """
+        s = slice(*s)
         projected_function = 0.0
-        for e in self.data:
+        for e in self.data[s]:
             projected_function += np.tensordot(
                 self.integration.dot(e, h), e, axes=0
             )
@@ -212,10 +245,10 @@ class Basis:
         h_interpolated : np.ndarray
             Interpolated function at EIM nodes.
         """
-        h = h.transpose()
-        h_at_nodes = h[np.array(self.eim_.nodes)]
+        h = h.T
+        h_at_nodes = h[self.eim_.nodes]
         h_interpolated = self.eim_.interpolant @ h_at_nodes
-        return h_interpolated.transpose()
+        return h_interpolated.T
 
 
 # =============================================================================
@@ -228,50 +261,73 @@ def _gs_one_element(h, basis, integration, max_iter=3):
     norm = integration.norm(h)
     e = h / norm
 
-    n_iters = 0
-    continue_loop = True
-    while continue_loop:
+    for _ in range(max_iter):
         for b in basis:
             e -= b * integration.dot(b, e)
         new_norm = integration.norm(e)
-
-        a = 0.5
-        if new_norm / norm <= a:
-            norm = new_norm
-            n_iters += 1
-            if n_iters > max_iter:
-                raise StopIteration(
-                    "Gram-Schmidt algorithm: max number of "
-                    "iterations reached ({}).".format(max_iter)
-                )
-        else:
-            continue_loop = False
+        if new_norm / norm > 0.5:
+            break
+        norm = new_norm
+    else:
+        raise StopIteration("Max number of iterations reached ({max_iter}).")
 
     return e / new_norm, new_norm
 
 
-def _sq_proj_errors(training, proj_matrix, basis, dot_product):
+def _sq_errs_abs(proj_vector, basis_element, dot_product, diff_training):
     """Square of projection errors from precomputed projection coefficients.
+
+    Since the training set is not a-priori normalized, this function computes
+    errors computing the squared norm of the difference between training set
+    and the approximation. This method trades accuracy by memory.
 
     Parameters
     ----------
-    training : numpy.ndarray
-    proj_matrix : numpy.ndarray
-        Stores the projection coefficients of the training functions.
-    basis : numpy.ndarray
-        Basis elements.
+    proj_vector : numpy.ndarray
+        Stores projection coefficients of training functions onto the actual
+        basis.
+    basis_element : numpy.ndarray
+        Actual basis element.
     dot_product : arby.Integration.dot
         Inherited dot product.
+    diff_training : numpy.ndarray
+        Difference between training set and projected set aiming to be
+        actualized.
+
+    Returns
+    -------
+    proj_errors : numpy.ndarray
+        Squared projection errors.
+    diff_training : numpy.ndarray
+        Actualized difference training set and projected set.
+    """
+    diff_training = np.subtract(
+        diff_training, np.tensordot(proj_vector, basis_element, axes=0)
+    )
+    return np.real(dot_product(diff_training, diff_training)), diff_training
+
+
+def _sq_errs_rel(errs, proj_vector):
+    """Square of projection errors from precomputed projection coefficients.
+
+    This function takes advantage of an orthonormalized basis and a normalized
+    training set to compute fewer floating-point operations than in the
+    non-normalized case.
+
+    Parameters
+    ----------
+    errs : numpy.array
+        Projection errors.
+    proj_vector : numpy.ndarray
+        Stores the projection coefficients of the training set onto the actual
+        basis element.
 
     Returns
     -------
     proj_errors : numpy.ndarray
         Squared projection errors.
     """
-    projected_training = proj_matrix.transpose() @ basis
-    diff = training - projected_training
-
-    return np.real(dot_product(diff, diff))
+    return np.subtract(errs, np.abs(proj_vector) ** 2)
 
 
 def _prune(greedy_errors, proj_matrix, num):
@@ -331,18 +387,20 @@ def gram_schmidt(functions, integration, max_iter=3) -> np.ndarray:
     if np.min(svds) < linear_indep_tol:
         raise ValueError("Functions are not linearly independent.")
 
-    ortho_basis = []
+    basis_data = np.zeros(functions.shape, dtype=functions.dtype)
 
     # First element of the basis is special, it's just normalized
-    ortho_basis.append(integration.normalize(functions[0]))
+    basis_data[0] = integration.normalize(functions[0])
 
     # For the rest of basis elements add them one by one by extending basis
-    for new_basis_elem in functions[1:]:
-        projected_element, _ = _gs_one_element(
-            new_basis_elem, ortho_basis, integration, max_iter
-        )
-        ortho_basis.append(projected_element)
-    basis_data = np.array(ortho_basis)
+    def gs_one_element(row):
+        return _gs_one_element(
+            row, basis=basis_data, integration=integration, max_iter=max_iter
+        )[0]
+
+    basis_data[1:] = np.apply_along_axis(
+        gs_one_element, axis=1, arr=functions[1:]
+    )
 
     return basis_data
 
@@ -352,21 +410,27 @@ def reduced_basis(
     physical_points,
     integration_rule="riemann",
     greedy_tol=1e-12,
+    normalize=False,
 ) -> RB:
     """Build a reduced basis from training data.
 
-    This function implements the Reduce Basis (RB) greedy algorithm for
+    This function implements the Reduced Basis (RB) greedy algorithm for
     building an orthonormalized reduced basis out from training data. The basis
     is built for reproducing the training functions within a user specified
-    tolerance [TiglioAndVillanueva2021]_ by linear combination of its elements.
-    Tuning the ``greedy_tol`` parameter allows to control the representation
-    accuracy of the basis.
+    tolerance [TiglioAndVillanueva2021]_ by linear combinations of its
+    elements. Tuning the ``greedy_tol`` parameter allows to control the
+    representation accuracy of the basis.
 
-    The ``integration_rule`` parameter specifies the rule that defines inner
+    The ``integration_rule`` parameter specifies the rule for defining inner
     products. If the training functions (rows of the ``training_set``) does not
     correspond to continuous data (e.g. time), choose ``"euclidean"``.
     Otherwise choose any of the quadratures defined in the ``arby.Integration``
     class.
+
+    Set the boolean ``normalize`` to True if you want to normalize the training
+    set before running the greedy algorithm. This condition not only emphasizes
+    on structure over scale but may leads to noticeable speedups for large
+    datasets.
 
     The output is a container which comprises RB data: a ``basis`` object
     storing the reduced basis and handling tools (see ``arby.Basis``); the
@@ -377,6 +441,21 @@ def reduced_basis(
     by the greedy algorithm. For example, we can recover the training set (more
     precisely, a compressed version of it) by multiplying the projection matrix
     with the reduced basis.
+
+    Parameters
+    ----------
+    training_set : numpy.ndarray
+        The training set of functions.
+    physical_points : numpy.ndarray
+        Physical points for quadrature rules.
+    integration_rule : str, optional
+        The quadrature rule to define an integration scheme.
+        Default = "riemann".
+    greedy_tol : float, optional
+        The greedy tolerance as a stopping condition for the reduced basis
+        greedy algorithm. Default = 1e-12.
+    normalize : bool, optional
+        True if you want to normalize the training set. Default = False.
 
     Returns
     -------
@@ -390,6 +469,12 @@ def reduced_basis(
         If ``training_set.shape[1]`` doesn't coincide with quadrature rule
         weights.
 
+    Notes
+    -----
+    If ``normalize`` is True, the projection coefficients are with respect to
+    the original basis but the greedy errors are relative to the normalized
+    training set.
+
     References
     ----------
     .. [TiglioAndVillanueva2021] Reduced Order and Surrogate Models for
@@ -399,43 +484,65 @@ def reduced_basis(
     """
     integration = integrals.Integration(physical_points, rule=integration_rule)
 
-    # useful information
+    # useful constants
     Ntrain = training_set.shape[0]
     Nsamples = training_set.shape[1]
+    max_rank = min(Ntrain, Nsamples)
 
-    # Validate inputs
+    # validate inputs
     if Nsamples != np.size(integration.weights_):
         raise ValueError(
             "Number of samples is inconsistent with quadrature rule."
         )
 
-    # If seed gives a null function, choose a random seed
-    index_seed = 0
-    seed_function = training_set[index_seed]
-    zero_function = np.zeros_like(seed_function)
-    while np.allclose(seed_function, zero_function):
-        index_seed = np.random.randint(1, Ntrain)
-        seed_function = training_set[index_seed]
+    if np.allclose(np.abs(training_set), 0, atol=1e-15):
+        raise ValueError("Null training set!")
 
     # ====== Seed the greedy algorithm and allocate memory ======
 
-    # Allocate memory for greedy algorithm arrays
-    greedy_errors = np.empty(Ntrain, dtype="double")
-    proj_matrix = np.empty((Ntrain, Ntrain), dtype=training_set.dtype)
+    # memory allocation
+    greedy_errors = np.empty(max_rank, dtype=np.float64)
+    proj_matrix = np.empty((max_rank, Ntrain), dtype=training_set.dtype)
+    basis_data = np.empty((max_rank, Nsamples), dtype=training_set.dtype)
 
-    # Seed
-    greedy_indices = [index_seed]
-    basis_data = np.empty_like(training_set)
-    basis_data[0] = integration.normalize(training_set[index_seed])
+    norms = integration.norm(training_set)
 
-    proj_matrix[0] = integration.dot(basis_data[0], training_set)
+    if normalize:
+        # normalize training set
+        training_set = np.array(
+            [
+                h if np.allclose(h, 0, atol=1e-15) else h / norms[i]
+                for i, h in enumerate(training_set)
+            ]
+        )
 
-    errs = _sq_proj_errors(
-        training_set,
-        proj_matrix[:1],
-        basis_data[:1],
-        integration.dot
-    )
+        # seed
+        next_index = 0
+        seed = training_set[next_index]
+
+        while next_index < Ntrain - 1:
+            if np.allclose(np.abs(seed), 0):
+                next_index += 1
+                seed = training_set[next_index]
+            else:
+                break
+
+        greedy_indices = [next_index]
+        basis_data[0] = training_set[next_index]
+        proj_matrix[0] = integration.dot(basis_data[0], training_set)
+        sq_errors = _sq_errs_rel
+        errs = sq_errors(np.ones(Ntrain), proj_matrix[0])
+
+    else:
+        next_index = np.argmax(norms)
+        greedy_indices = [next_index]
+        basis_data[0] = training_set[next_index] / norms[next_index]
+        proj_matrix[0] = integration.dot(basis_data[0], training_set)
+        sq_errors = _sq_errs_abs
+        errs, diff_training = sq_errors(
+            proj_matrix[0], basis_data[0], integration.dot, training_set
+        )
+
     next_index = np.argmax(errs)
     greedy_errors[0] = errs[next_index]
     sigma = greedy_errors[0]
@@ -449,13 +556,14 @@ def reduced_basis(
         if next_index in greedy_indices:
             # Prune excess allocated entries
             greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn)
+            if normalize:
+                # restore proj matrix
+                proj_matrix = norms * proj_matrix
             return RB(
-                basis=Basis(
-                    data=basis_data[: nn], integration=integration
-                ),
+                basis=Basis(data=basis_data[:nn], integration=integration),
                 indices=greedy_indices,
                 errors=greedy_errors,
-                projection_matrix=proj_matrix,
+                projection_matrix=proj_matrix.T,
             )
 
         greedy_indices.append(next_index)
@@ -465,12 +573,12 @@ def reduced_basis(
             integration,
         )
         proj_matrix[nn] = integration.dot(basis_data[nn], training_set)
-        errs = _sq_proj_errors(
-            training_set,
-            proj_matrix[:nn + 1],
-            basis_data[:nn + 1],
-            integration.dot
-        )
+        if normalize:
+            errs = sq_errors(errs, proj_matrix[nn])
+        else:
+            errs, diff_training = sq_errors(
+                proj_matrix[nn], basis_data[nn], integration.dot, diff_training
+            )
         next_index = np.argmax(errs)
         greedy_errors[nn] = errs[next_index]
 
@@ -480,10 +588,13 @@ def reduced_basis(
 
     # Prune excess allocated entries
     greedy_errors, proj_matrix = _prune(greedy_errors, proj_matrix, nn + 1)
+    if normalize:
+        # restore proj matrix
+        proj_matrix = norms * proj_matrix
 
     return RB(
         basis=Basis(data=basis_data[: nn + 1], integration=integration),
         indices=greedy_indices,
         errors=greedy_errors,
-        projection_matrix=proj_matrix.transpose(),
+        projection_matrix=proj_matrix.T,
     )

@@ -18,12 +18,6 @@ from scipy.special import jv as BesselJ
 # TESTS
 # =============================================================================
 
-# def test_sliced_training(rom_parameters):
-#    sliced_training = rom_parameters["training_set"][:10,:]
-#    rom_parameters.update(training_set=sliced_training)
-#    with pytest.raises(ValueError):
-#        arby.ReducedOrderModel(**rom_parameters)
-
 
 def test_wrong_Nsamples(rom_parameters):
     """Test input consistency."""

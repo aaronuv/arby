@@ -21,13 +21,15 @@ from scipy.special import jv as BesselJ
 # TESTS
 # =============================================================================
 
+
 def test_wrong_Nsamples(rom_parameters):
     """Test input consistency."""
     rom_parameters.update(physical_points=np.linspace(0, 1, 11))
     with pytest.raises(ValueError):
         arby.reduced_basis(
-            training_set=rom_parameters['training_set'],
-            physical_points=rom_parameters['physical_points'])
+            training_set=rom_parameters["training_set"],
+            physical_points=rom_parameters["physical_points"],
+        )
 
 
 def test_basis_identity(training_set, physical_points, basis_data):
@@ -174,7 +176,8 @@ def test_projection_error_consistency():
     )
 
 
-def test_greedy_already_selected():
+@pytest.mark.parametrize("normalize", [True, False])
+def test_greedy_already_selected(normalize):
     """Test greedy stopping condition."""
 
     # Sample parameter nu and physical variable x
@@ -187,10 +190,11 @@ def test_greedy_already_selected():
     )
 
     # build reduced basis with exagerated greedy_tol
-    RB = arby.reduced_basis(training_set, physical_points, greedy_tol=1e-30)
-    basis = RB.basis
+    rb_data = arby.reduced_basis(
+        training_set, physical_points, greedy_tol=1e-40, normalize=normalize
+    )
 
-    assert basis.Nbasis_ == 14
+    assert rb_data.errors[-1] < 1e-15
 
 
 def test_gram_schmidt(basis_data):
@@ -218,20 +222,76 @@ def test_gram_schmidt_linear_independence(basis_data):
         arby.gram_schmidt(basis_data, integration)
 
 
-def test_linear_model():
-    """Test a linear model for one-element basis."""
+@pytest.mark.parametrize("rule", ["euclidean", "riemann", "trapezoidal"])
+@pytest.mark.parametrize("normalize", [True, False])
+def test_linear_model(normalize, rule):
+    """Test that a linear model gives one-element basis."""
     nu = np.linspace(1, 5, 101)
     x = np.linspace(1, 2, 101)
 
     # create a training set for f(nu, x) = nu * x^2
-    training = np.array([nu * x**2 for nu in nu])
+    training = np.array([nu * x ** 2 for nu in nu])
     rb_data = arby.reduced_basis(
         training_set=training,
         physical_points=x,
-        greedy_tol=1e-16
+        integration_rule=rule,
+        greedy_tol=1e-15,
+        normalize=normalize,
     )
 
-    assert len(rb_data.indices) == 1
-    assert rb_data.basis.Nbasis_ == 1
-    assert rb_data.errors.size == 1
-    assert rb_data.projection_matrix.shape[1] == 1
+    expected_dim = 1
+    assert len(rb_data.indices) == expected_dim
+    assert rb_data.basis.Nbasis_ == expected_dim
+    assert rb_data.errors.size == expected_dim
+    assert rb_data.projection_matrix.shape[1] == expected_dim
+
+
+@pytest.mark.parametrize("rule", ["euclidean", "riemann", "trapezoidal"])
+@pytest.mark.parametrize("normalize", [True, False])
+def test_2dim_model(normalize, rule):
+    """Test that 2-dim model gives a two-element basis."""
+    nu = np.linspace(1, 2, 101)
+    x = np.linspace(1, 2, 101)
+
+    # create a training set for f(nu, x) = sin(nu) * x^2 + nu^2 * x^3
+    training = np.array([np.sin(nu) * x ** 2 + nu ** 2 * x ** 3 for nu in nu])
+    rb_data = arby.reduced_basis(
+        training_set=training,
+        physical_points=x,
+        integration_rule=rule,
+        greedy_tol=1e-15,
+        normalize=normalize,
+    )
+
+    expected_dim = 2
+    assert len(rb_data.indices) == expected_dim
+    assert rb_data.basis.Nbasis_ == expected_dim
+    assert rb_data.errors.size == expected_dim
+    assert rb_data.projection_matrix.shape[1] == expected_dim
+
+
+def test_zero_seed_selected(rom_parameters):
+    """Test non-zero seed selection."""
+    training_set = rom_parameters["training_set"]
+    # replace seed by a null vector
+    # the next series is a non-zero vector
+    training_set[0] = np.zeros(training_set.shape[1])
+    rb_data = arby.reduced_basis(
+        training_set=training_set,
+        physical_points=rom_parameters["physical_points"],
+    )
+    # check the next seed is indeed the first basis element
+    assert rb_data.indices[0] == 1
+
+
+def test_null_training(rom_parameters):
+    """Test null training set detection."""
+    rom_parameters.update(
+        training_set=np.zeros_like(rom_parameters["training_set"])
+    )
+
+    with pytest.raises(ValueError):
+        arby.reduced_basis(
+            training_set=rom_parameters["training_set"],
+            physical_points=rom_parameters["physical_points"],
+        )

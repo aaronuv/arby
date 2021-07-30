@@ -177,4 +177,4 @@ class Integration:
             Real or complex numbers array.
 
         """
-        return f / self.norm(f)
+        return np.divide(f, self.norm(f).reshape(-1, 1))
