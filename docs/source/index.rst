@@ -36,13 +36,12 @@ technique for reducing the computational complexity of mathematical models in nu
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents
 
    installation
-   tutorial
-   api
    pendulum
+   api
 
 Quick Usage
 ===========
