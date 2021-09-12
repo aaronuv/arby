@@ -495,7 +495,7 @@ def reduced_basis(
             "Number of samples is inconsistent with quadrature rule."
         )
 
-    if np.allclose(np.abs(training_set), 0, atol=1e-15):
+    if np.allclose(np.abs(training_set), 0, atol=1e-30):
         raise ValueError("Null training set!")
 
     # ====== Seed the greedy algorithm and allocate memory ======
